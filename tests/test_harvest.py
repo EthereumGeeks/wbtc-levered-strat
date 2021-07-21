@@ -2,54 +2,7 @@ import brownie
 from brownie import Contract
 import pytest
 
-
-def test_vault_emergency(
-  chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
-):
-  ## Deposit in Vault
-  token.approve(vault.address, amount, {"from": user})
-  vault.deposit(amount, {"from": user})
-  assert token.balanceOf(vault.address) == amount
-
-  print("stratDep1 ")
-  print(strategy.estimatedTotalAssets())
-
-  # Harvest 1: Send funds through the strategy
-  strategy.harvest()
-  chain.mine(100)
-  assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
-
-  ## Set Emergency
-  vault.setEmergencyShutdown(True)
-
-  ## Withdraw (does it work, do you get what you expect)
-  vault.withdraw({"from": user})
-
-  assert pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == amount
-
-def test_emergency_permissions_deny(strategy, strategist, gov, guardian, management, accounts):
-  with brownie.reverts("!authorized"):
-    strategy.setEmergencyExit({"from": accounts[9]})
-
-def test_emergency_permissions_strategist(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": strategist})
-    assert strategy.emergencyExit() == True
-
-def test_emergency_permissions_gov(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": gov})
-    assert strategy.emergencyExit() == True
-
-def test_emergency_permissions_guardian(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": guardian})
-    assert strategy.emergencyExit() == True
-
-def test_emergency_permissions_management(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": management})
-    assert strategy.emergencyExit() == True
-
-# TODO: Add tests that show proper operation of this strategy through "emergencyExit"
-#       Make sure to demonstrate the "worst case losses" as well as the time it takes
-def test_emergency_exit(
+def test_profitable_harvest(
     chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
 ):
     # Deposit to the vault
@@ -115,11 +68,7 @@ def test_emergency_exit(
     assert vault.totalAssets() > before_total ## NOTE: Assets must increase or there's something off with harvest
     ## NOTE: May want to harvest a third time and see if it icnreases totalDebt for strat
 
-    strategy.setEmergencyExit({"from": strategist})
-
-    strategy.harvest() ## Will liquidate all
-
-    assert lpComponent.balanceOf(strategy) == 0
-    assert token.balanceOf(strategy) == 0
-    assert token.balanceOf(vault) >= amount ## The vault has all funds (some loss may have happened)
-
+    ## Harvest3 since we are using leveraged strat
+    strategy.harvest()
+    vault.withdraw(amount, {"from": user})
+    assert token.balanceOf(user) > amount ## The user must have made more money, else it means funds are stuck
