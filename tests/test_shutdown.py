@@ -2,21 +2,23 @@ import brownie
 from brownie import Contract
 import pytest
 
+"""
+NOTE: Since we interact with AAVE on mainnet fork, you may have to run this file separately
+"""
 
 def test_vault_emergency(
   chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
 ):
   ## Deposit in Vault
   token.approve(vault.address, amount, {"from": user})
+
   vault.deposit(amount, {"from": user})
   assert token.balanceOf(vault.address) == amount
-
-  print("stratDep1 ")
-  print(strategy.estimatedTotalAssets())
+  assert strategy.estimatedTotalAssets() == 0
 
   # Harvest 1: Send funds through the strategy
   strategy.harvest()
-  chain.mine(100)
+  chain.mine(1)
   assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
   ## Set Emergency
@@ -26,26 +28,6 @@ def test_vault_emergency(
   vault.withdraw({"from": user})
 
   assert pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == amount
-
-def test_emergency_permissions_deny(strategy, strategist, gov, guardian, management, accounts):
-  with brownie.reverts("!authorized"):
-    strategy.setEmergencyExit({"from": accounts[9]})
-
-def test_emergency_permissions_strategist(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": strategist})
-    assert strategy.emergencyExit() == True
-
-def test_emergency_permissions_gov(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": gov})
-    assert strategy.emergencyExit() == True
-
-def test_emergency_permissions_guardian(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": guardian})
-    assert strategy.emergencyExit() == True
-
-def test_emergency_permissions_management(strategy, strategist, gov, guardian, management, accounts):
-    strategy.setEmergencyExit({"from": management})
-    assert strategy.emergencyExit() == True
 
 # TODO: Add tests that show proper operation of this strategy through "emergencyExit"
 #       Make sure to demonstrate the "worst case losses" as well as the time it takes
@@ -62,7 +44,7 @@ def test_emergency_exit(
 
     # Harvest 1: Send funds through the strategy
     strategy.harvest()
-    chain.mine(100)
+    chain.mine(1)
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
     
@@ -123,3 +105,38 @@ def test_emergency_exit(
     assert token.balanceOf(strategy) == 0
     assert token.balanceOf(vault) >= amount ## The vault has all funds (some loss may have happened)
 
+def test_massive_loss(
+  chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
+):
+  """
+    The only way to loose on this strategy is if rewards are no longer there
+    Also not harvesting in a long time and then revoking the strat will incurr in lossess
+    Withdrawing takes no time, funds are liquid at all times (there may be black swan exceptions)
+
+    We can quantify the loss as the difference between the interest we gain vs the interest we pay * the time we don't harvest
+  """
+    ## Deposit in Vault
+  token.approve(vault.address, amount, {"from": user})
+
+  vault.deposit(amount, {"from": user})
+  assert token.balanceOf(vault.address) == amount
+  assert strategy.estimatedTotalAssets() == 0
+
+  # Harvest 1: Send funds through the strategy
+  strategy.harvest()
+  chain.sleep(3600 * 24 * 10) ## Sleep 10 days = Loose due to interest
+
+  chain.mine(1)
+  assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
+
+  ## Set Emergency = We will withdraw all next harvest = We will not collect rewards
+  vault.setEmergencyShutdown(True)
+
+  ## Withdraw (does it work, do you get what you expect)
+  vault.withdraw({"from": user})
+
+  ## NOTE: I just took this from a manual test
+  print("We lost")
+  print(amount - token.balanceOf(user))
+
+  assert token.balanceOf(user) < amount ## We lost some
