@@ -105,6 +105,8 @@ def test_emergency_exit(
     assert token.balanceOf(strategy) == 0
     assert token.balanceOf(vault) >= amount ## The vault has all funds (some loss may have happened)
 
+    vault.withdraw({"from": user}) ## Withdraw to make sure we are good for next test
+
 def test_massive_loss(
   chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
 ):
@@ -114,6 +116,8 @@ def test_massive_loss(
     Withdrawing takes no time, funds are liquid at all times (there may be black swan exceptions)
 
     We can quantify the loss as the difference between the interest we gain vs the interest we pay * the time we don't harvest
+
+    NOTE: Waiting more than 5 days may trigger the maxLoss check on Vault.vy
   """
     ## Deposit in Vault
   token.approve(vault.address, amount, {"from": user})
@@ -124,19 +128,25 @@ def test_massive_loss(
 
   # Harvest 1: Send funds through the strategy
   strategy.harvest()
-  chain.sleep(3600 * 24 * 10) ## Sleep 10 days = Loose due to interest
-
   chain.mine(1)
   assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
+
+  DAYS = 5
+  chain.sleep(3600 * 24 * DAYS)  ## Sleep for days = Loose due to interest
+  chain.mine(1)
+
+  INTEREST_ESTIMATE = 100 ## We loose around 1% per year if we never harvest
 
   ## Set Emergency = We will withdraw all next harvest = We will not collect rewards
   vault.setEmergencyShutdown(True)
 
   ## Withdraw (does it work, do you get what you expect)
-  vault.withdraw({"from": user})
+  vault.withdraw(vault.balanceOf(user), user, INTEREST_ESTIMATE / 3.65 * DAYS  + 1, {"from": user})
 
   ## NOTE: I just took this from a manual test
   print("We lost")
+  print(amount - token.balanceOf(user))
+  print("As percentage")
   print(amount - token.balanceOf(user))
 
   assert token.balanceOf(user) < amount ## We lost some
