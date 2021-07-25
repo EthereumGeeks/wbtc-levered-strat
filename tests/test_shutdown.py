@@ -7,7 +7,7 @@ NOTE: Since we interact with AAVE on mainnet fork, you may have to run this file
 """
 
 def test_vault_emergency(
-  chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
+  chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController, isolation
 ):
   ## Deposit in Vault
   token.approve(vault.address, amount, {"from": user})
@@ -32,7 +32,7 @@ def test_vault_emergency(
 # TODO: Add tests that show proper operation of this strategy through "emergencyExit"
 #       Make sure to demonstrate the "worst case losses" as well as the time it takes
 def test_emergency_exit(
-    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
+    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController, isolation
 ):
     # Deposit to the vault
     token.approve(vault.address, amount, {"from": user})
@@ -108,7 +108,7 @@ def test_emergency_exit(
     vault.withdraw({"from": user}) ## Withdraw to make sure we are good for next test
 
 def test_massive_loss(
-  chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
+  chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController, isolation
 ):
   """
     The only way to loose on this strategy is if rewards are no longer there
