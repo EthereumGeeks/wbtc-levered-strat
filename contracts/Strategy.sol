@@ -99,9 +99,13 @@ contract Strategy is BaseStrategy {
 
             // Get it all out
             _divestFromAAVE();
+        
+            // Get rewards
+            _claimRewardsAndGetMoreWant(); 
 
+            // Repay debt
             uint256 maxRepay = want.balanceOf(address(this));
-            if(_debtOutstanding >  maxRepay) {
+            if(_debtOutstanding > maxRepay) {
                 // we can't pay all, means we lost some
                 _loss = _loss.add(_debtOutstanding.sub(maxRepay));
                 _debtPayment = maxRepay;
@@ -111,7 +115,7 @@ contract Strategy is BaseStrategy {
             }        
         } else {
             // Do normal Harvest
-            _debtPayment = 0; // Since we never lever up, we never have to pay back any debt
+            _debtPayment = 0;
 
             // Get current amount of want // used to estimate profit
             uint256 beforeBalance = want.balanceOf(address(this));
@@ -277,8 +281,14 @@ contract Strategy is BaseStrategy {
         // Harvest rewards one last time
         _claimRewardsAndGetMoreWant();
 
-        aToken.safeTransfer(_newStrategy, aToken.balanceOf(address(this)));
-        reward.safeTransfer(_newStrategy, reward.balanceOf(address(this)));
+        // Just in case we don't fully liquidate to want
+        if(aToken.balanceOf(address(this)) > 0){
+            aToken.safeTransfer(_newStrategy, aToken.balanceOf(address(this)));
+        }
+
+        if(reward.balanceOf(address(this)) > 0){
+            reward.safeTransfer(_newStrategy, reward.balanceOf(address(this)));
+        }
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -430,6 +440,11 @@ contract Strategy is BaseStrategy {
                 address(this)
             );
         }
+    }
+
+    // Emergency function that we can use to deleverage manually if something is broken
+    function manualWithdrawStepFromAAVE(uint256 canRepay) public onlyVaultManagers {
+        _withdrawStepFromAAVE(canRepay);
     }
 
     // Withdraw and Repay AAVE Debt

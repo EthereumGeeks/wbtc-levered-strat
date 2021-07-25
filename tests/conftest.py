@@ -3,11 +3,6 @@ from brownie import config
 from brownie import Contract
 
 
-## Forces reset before each test
-@pytest.fixture(autouse=True)
-def isolation(fn_isolation):
-    pass
-
 @pytest.fixture
 def gov(accounts):
     yield accounts.at("0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52", force=True)
@@ -113,3 +108,8 @@ def strategy(strategist, keeper, vault, Strategy, gov):
 @pytest.fixture
 def RELATIVE_APPROX():
     yield 1e-5
+
+## Forces reset before each test
+@pytest.fixture(autouse=True)
+def isolation(fn_isolation):
+    pass
