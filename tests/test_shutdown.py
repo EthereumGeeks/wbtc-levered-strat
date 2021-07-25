@@ -31,6 +31,7 @@ def test_vault_emergency(
     assert strategy.estimatedTotalAssets() == 0
 
     # Harvest 1: Send funds through the strategy
+    chain.sleep(1)
     strategy.harvest()
     chain.mine(1)
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -71,6 +72,7 @@ def test_emergency_exit(
     print(strategy.estimatedTotalAssets())
 
     # Harvest 1: Send funds through the strategy
+    chain.sleep(1)
     strategy.harvest()
     chain.mine(1)
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
@@ -171,6 +173,7 @@ def test_massive_loss(
     assert strategy.estimatedTotalAssets() == 0
 
     # Harvest 1: Send funds through the strategy
+    chain.sleep(1)
     strategy.harvest()
     chain.mine(1)
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
