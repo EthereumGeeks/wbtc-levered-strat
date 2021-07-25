@@ -18,8 +18,12 @@ import {
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import {ILendingPool} from "../interfaces/aave/ILendingPool.sol";
-import {IAaveIncentivesController} from "../interfaces/aave/IAaveIncentivesController.sol";
-import {ILendingPoolAddressesProvider} from "../interfaces/aave/ILendingPoolAddressesProvider.sol";
+import {
+    IAaveIncentivesController
+} from "../interfaces/aave/IAaveIncentivesController.sol";
+import {
+    ILendingPoolAddressesProvider
+} from "../interfaces/aave/ILendingPoolAddressesProvider.sol";
 import {IPriceOracle} from "../interfaces/aave/IPriceOracle.sol";
 import {ISwapRouter} from "../interfaces/uniswap/ISwapRouter.sol";
 
@@ -42,10 +46,14 @@ contract Strategy is BaseStrategy {
     IAaveIncentivesController public constant INCENTIVES_CONTROLLER =
         IAaveIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
 
-    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER = ILendingPoolAddressesProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
+    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER =
+        ILendingPoolAddressesProvider(
+            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
+        );
 
     // For Swapping
-    ISwapRouter public constant ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    ISwapRouter public constant ROUTER =
+        ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     IERC20 public constant AAVE_TOKEN =
         IERC20(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
@@ -53,7 +61,7 @@ contract Strategy is BaseStrategy {
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     uint256 public immutable DECIMALS = 8; // For toETH conversion
-    
+
     // Leverage
     uint256 public constant MAX_BPS = 10000;
     uint256 public minHealth = 1300000000000000000; // 1.3 with 18 decimals
@@ -104,20 +112,20 @@ contract Strategy is BaseStrategy {
 
             // Get it all out
             _divestFromAAVE();
-        
+
             // Get rewards
-            _claimRewardsAndGetMoreWant(); 
+            _claimRewardsAndGetMoreWant();
 
             // Repay debt
             uint256 maxRepay = want.balanceOf(address(this));
-            if(_debtOutstanding > maxRepay) {
+            if (_debtOutstanding > maxRepay) {
                 // we can't pay all, means we lost some
                 _loss = _loss.add(_debtOutstanding.sub(maxRepay));
                 _debtPayment = maxRepay;
             } else {
                 // We can pay all, let's do it
                 _debtPayment = toWithdraw;
-            }        
+            }
         } else {
             // Do normal Harvest
             _debtPayment = 0;
@@ -133,10 +141,12 @@ contract Strategy is BaseStrategy {
             _profit = earned;
             _loss = lost;
         }
-
     }
 
-    function _repayAAVEBorrow(uint256 beforeBalance) internal returns (uint256 _profit, uint256 _loss) {
+    function _repayAAVEBorrow(uint256 beforeBalance)
+        internal
+        returns (uint256 _profit, uint256 _loss)
+    {
         uint256 afterSwapBalance = want.balanceOf(address(this));
         uint256 wantFromSwap = afterSwapBalance.sub(beforeBalance);
 
@@ -155,7 +165,7 @@ contract Strategy is BaseStrategy {
         // Pay off any debt
         // Debt is equal to negative of canBorrow
         uint256 toRepay = debtBelowHealth();
-        if(toRepay > wantEarned) {
+        if (toRepay > wantEarned) {
             // We lost some money
 
             // Repay all we can, rest is loss
@@ -206,36 +216,42 @@ contract Strategy is BaseStrategy {
             return;
         }
 
-
         // Swap Rewards in UNIV3
         // NOTE: Unoptimized, can be frontrun and most importantly this pool is low liquidity
 
-            ISwapRouter.ExactInputSingleParams memory fromRewardToAAVEParams
-         = ISwapRouter.ExactInputSingleParams(
-            address(reward),
-            address(AAVE_TOKEN),
-            10000,
-            address(this),
-            now,
-            rewardsAmount, // wei
-            0,
-            0
-        );
+        ISwapRouter.ExactInputSingleParams memory fromRewardToAAVEParams =
+            ISwapRouter.ExactInputSingleParams(
+                address(reward),
+                address(AAVE_TOKEN),
+                10000,
+                address(this),
+                now,
+                rewardsAmount, // wei
+                0,
+                0
+            );
         ROUTER.exactInputSingle(fromRewardToAAVEParams);
 
         uint256 aaveToSwap = AAVE_TOKEN.balanceOf(address(this));
 
         // We now have AAVE tokens, let's get wBTC
-        bytes memory path = abi.encodePacked(
-            address(AAVE_TOKEN),
-            uint24(10000),
-            address(WETH_TOKEN),
-            uint24(10000),
-            address(want)
-        );
+        bytes memory path =
+            abi.encodePacked(
+                address(AAVE_TOKEN),
+                uint24(10000),
+                address(WETH_TOKEN),
+                uint24(10000),
+                address(want)
+            );
 
-        ISwapRouter.ExactInputParams memory fromAAVETowBTCParams = ISwapRouter
-        .ExactInputParams(path, address(this), now, aaveToSwap, 0);
+        ISwapRouter.ExactInputParams memory fromAAVETowBTCParams =
+            ISwapRouter.ExactInputParams(
+                path,
+                address(this),
+                now,
+                aaveToSwap,
+                0
+            );
         ROUTER.exactInput(fromAAVETowBTCParams);
     }
 
@@ -272,7 +288,6 @@ contract Strategy is BaseStrategy {
         return want.balanceOf(address(this));
     }
 
-
     // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
 
     function prepareMigration(address _newStrategy) internal override {
@@ -287,11 +302,11 @@ contract Strategy is BaseStrategy {
         _claimRewardsAndGetMoreWant();
 
         // Just in case we don't fully liquidate to want
-        if(aToken.balanceOf(address(this)) > 0){
+        if (aToken.balanceOf(address(this)) > 0) {
             aToken.safeTransfer(_newStrategy, aToken.balanceOf(address(this)));
         }
 
-        if(reward.balanceOf(address(this)) > 0){
+        if (reward.balanceOf(address(this)) > 0) {
             reward.safeTransfer(_newStrategy, reward.balanceOf(address(this)));
         }
     }
@@ -343,11 +358,12 @@ contract Strategy is BaseStrategy {
         returns (uint256)
     {
         address priceOracle = ADDRESS_PROVIDER.getPriceOracle();
-        uint256 priceInEth = IPriceOracle(priceOracle).getAssetPrice(address(want));
+        uint256 priceInEth =
+            IPriceOracle(priceOracle).getAssetPrice(address(want));
 
         // Opposite of priceInEth
         // Multiply first to keep rounding
-        uint256 priceInWant = _amtInWei.mul(10 ** DECIMALS).div(priceInEth);
+        uint256 priceInWant = _amtInWei.mul(10**DECIMALS).div(priceInEth);
 
         // TODO create an accurate price oracle
         return priceInWant;
@@ -399,9 +415,8 @@ contract Strategy is BaseStrategy {
         if (healthFactor > minHealth) {
             // Amount = deposited * ltv - borrowed
             // Div MAX_BPS because because ltv / maxbps is the percent
-            uint256 maxValue = deposited().mul(ltv).div(MAX_BPS).sub(
-                borrowed()
-            );
+            uint256 maxValue =
+                deposited().mul(ltv).div(MAX_BPS).sub(borrowed());
 
             // Don't borrow if it's dust, save gas
             if (maxValue < minRebalanceAmount) {
@@ -455,7 +470,10 @@ contract Strategy is BaseStrategy {
     }
 
     // Emergency function that we can use to deleverage manually if something is broken
-    function manualWithdrawStepFromAAVE(uint256 canRepay) public onlyVaultManagers {
+    function manualWithdrawStepFromAAVE(uint256 canRepay)
+        public
+        onlyVaultManagers
+    {
         _withdrawStepFromAAVE(canRepay);
     }
 
@@ -486,9 +504,8 @@ contract Strategy is BaseStrategy {
             return uint256(-1); //You have repaid all
         }
 
-        uint256 diff = aBalance.sub(
-            vBalance.mul(10000).div(currentLiquidationThreshold)
-        );
+        uint256 diff =
+            aBalance.sub(vBalance.mul(10000).div(currentLiquidationThreshold));
         uint256 inWant = diff.mul(95).div(100); // Take 95% just to be safe
 
         return inWant;
