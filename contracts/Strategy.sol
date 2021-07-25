@@ -19,6 +19,8 @@ import {
 
 import {ILendingPool} from "../interfaces/aave/ILendingPool.sol";
 import {IAaveIncentivesController} from "../interfaces/aave/IAaveIncentivesController.sol";
+import {ILendingPoolAddressesProvider} from "../interfaces/aave/ILendingPoolAddressesProvider.sol";
+import {IPriceOracle} from "../interfaces/aave/IPriceOracle.sol";
 import {ISwapRouter} from "../interfaces/uniswap/ISwapRouter.sol";
 
 contract Strategy is BaseStrategy {
@@ -40,6 +42,8 @@ contract Strategy is BaseStrategy {
     IAaveIncentivesController public constant INCENTIVES_CONTROLLER =
         IAaveIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
 
+    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER = ILendingPoolAddressesProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
+
     // For Swapping
     ISwapRouter public constant ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
@@ -48,6 +52,8 @@ contract Strategy is BaseStrategy {
     IERC20 public constant WETH_TOKEN =
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
+    uint256 public immutable DECIMALS = 8; // For toETH conversion
+    
     // Leverage
     uint256 public constant MAX_BPS = 10000;
     uint256 public minHealth = 1300000000000000000; // 1.3 with 18 decimals
@@ -62,7 +68,6 @@ contract Strategy is BaseStrategy {
         want.safeApprove(address(LENDING_POOL), type(uint256).max);
         reward.safeApprove(address(ROUTER), type(uint256).max);
         AAVE_TOKEN.safeApprove(address(ROUTER), type(uint256).max);
-
     }
 
     function setMinHealth(uint256 newMinHealth) external onlyKeepers {
@@ -337,8 +342,15 @@ contract Strategy is BaseStrategy {
         override
         returns (uint256)
     {
+        address priceOracle = ADDRESS_PROVIDER.getPriceOracle();
+        uint256 priceInEth = IPriceOracle(priceOracle).getAssetPrice(address(want));
+
+        // Opposite of priceInEth
+        // Multiply first to keep rounding
+        uint256 priceInWant = _amtInWei.mul(10 ** DECIMALS).div(priceInEth);
+
         // TODO create an accurate price oracle
-        return _amtInWei;
+        return priceInWant;
     }
 
     /* Leverage functions */
