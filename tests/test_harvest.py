@@ -1,7 +1,20 @@
 import pytest
 
+
 def test_profitable_harvest(
-    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, lpComponent, borrowed, reward, incentivesController
+    chain,
+    accounts,
+    token,
+    vault,
+    strategy,
+    user,
+    strategist,
+    amount,
+    RELATIVE_APPROX,
+    lpComponent,
+    borrowed,
+    reward,
+    incentivesController,
 ):
     # Deposit to the vault
     token.approve(vault.address, amount, {"from": user})
@@ -13,35 +26,32 @@ def test_profitable_harvest(
 
     # Harvest 1: Send funds through the strategy
     strategy.harvest()
-    chain.mine(1) ## Recalculate rewards
+    chain.mine(1)  ## Recalculate rewards
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
-    
     ## Code for Harvesting
     before_pps = vault.pricePerShare()
     before_total = vault.totalAssets()
 
-    chain.sleep(3600 * 24 * 1) ## Sleep 1 day
+    chain.sleep(3600 * 24 * 1)  ## Sleep 1 day
     chain.mine(1)
-    
-    print("Reward") 
-    print(incentivesController.getRewardsBalance(
-            [lpComponent, borrowed],
-            strategy
-        ))
+
+    print("Reward")
+    print(incentivesController.getRewardsBalance([lpComponent, borrowed], strategy))
     print("stratDep2 ")
     print(strategy.estimatedTotalAssets())
 
     # Harvest 2: Realize profit
     strategy.harvest()
-    print("Reward 2") 
-    print(incentivesController.getRewardsBalance(
-            [lpComponent, borrowed],
-            strategy
-        ))
+    print("Reward 2")
+    print(incentivesController.getRewardsBalance([lpComponent, borrowed], strategy))
     print("stratDep3 ")
     print(strategy.estimatedTotalAssets())
-    amountAfterHarvest = token.balanceOf(strategy) + lpComponent.balanceOf(strategy) - borrowed.balanceOf(strategy)
+    amountAfterHarvest = (
+        token.balanceOf(strategy)
+        + lpComponent.balanceOf(strategy)
+        - borrowed.balanceOf(strategy)
+    )
     chain.sleep(3600 * 6)  # 6 hrs needed for profits to unlock
     chain.mine(1)
     profit = token.balanceOf(vault.address)  # Profits go to vault
@@ -49,7 +59,7 @@ def test_profitable_harvest(
     # NOTE: Your strategy must be profitable
     # NOTE: May have to be changed based on implementation
     stratAssets = strategy.estimatedTotalAssets()
-    
+
     print("stratAssets")
     print(stratAssets)
 
@@ -58,13 +68,19 @@ def test_profitable_harvest(
     print(vaultAssets)
 
     ## Total assets for strat are token + lpComponent + borrowed
-    assert  amountAfterHarvest + profit > amount
+    assert amountAfterHarvest + profit > amount
     ## NOTE: Changed to >= because I can't get the PPS to increase
-    assert vault.pricePerShare() >= before_pps ## NOTE: May want to tweak this to >= or increase amounts and blocks
-    assert vault.totalAssets() > before_total ## NOTE: Assets must increase or there's something off with harvest
+    assert (
+        vault.pricePerShare() >= before_pps
+    )  ## NOTE: May want to tweak this to >= or increase amounts and blocks
+    assert (
+        vault.totalAssets() > before_total
+    )  ## NOTE: Assets must increase or there's something off with harvest
     ## NOTE: May want to harvest a third time and see if it icnreases totalDebt for strat
 
     ## Harvest3 since we are using leveraged strat
     strategy.harvest()
     vault.withdraw(amount, {"from": user})
-    assert token.balanceOf(user) > amount ## The user must have made more money, else it means funds are stuck
+    assert (
+        token.balanceOf(user) > amount
+    )  ## The user must have made more money, else it means funds are stuck

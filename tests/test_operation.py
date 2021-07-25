@@ -70,7 +70,9 @@ def test_change_debt(
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == half
 
 
-def test_sweep(gov, vault, strategy, token, user, amount, weth, weth_amout, lpComponent, reward):
+def test_sweep(
+    gov, vault, strategy, token, user, amount, weth, weth_amout, lpComponent, reward
+):
     # Strategy want token doesn't work
     token.transfer(strategy, amount, {"from": user})
     assert token.address == strategy.want()

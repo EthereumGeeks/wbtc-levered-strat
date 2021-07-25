@@ -43,10 +43,12 @@ def token():
     token_address = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
     yield Contract(token_address)
 
+
 @pytest.fixture
 def lpComponent():
     token_address = "0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
     yield Contract(token_address)
+
 
 @pytest.fixture
 def borrowed():
@@ -59,10 +61,12 @@ def incentivesController():
     token_address = "0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5"
     yield Contract(token_address)
 
+
 @pytest.fixture
 def reward():
     token_address = "0x4da27a545c0c5b758a6ba100e3a049001de870f5"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
     yield Contract(token_address)
+
 
 @pytest.fixture
 def amount(accounts, token, user):
@@ -108,6 +112,7 @@ def strategy(strategist, keeper, vault, Strategy, gov):
 @pytest.fixture
 def RELATIVE_APPROX():
     yield 1e-5
+
 
 ## Forces reset before each test
 @pytest.fixture(autouse=True)

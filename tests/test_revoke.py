@@ -22,7 +22,6 @@ def test_revoke_strategy_from_vault(
     vault.withdraw({"from": user})
 
 
-
 def test_revoke_strategy_from_strategy(
     chain, token, vault, strategy, amount, gov, user, RELATIVE_APPROX
 ):
