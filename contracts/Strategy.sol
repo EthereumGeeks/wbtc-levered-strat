@@ -62,10 +62,14 @@ contract Strategy is BaseStrategy {
 
     uint256 public immutable DECIMALS = 8; // For toETH conversion
 
+    // Swap tollerance for stkAAVE to AAVE, in BPS
+    uint256 public maxDiscount = 500; // 5% 
+
     // Leverage
     uint256 public constant MAX_BPS = 10000;
-    uint256 public minHealth = 1300000000000000000; // 1.3 with 18 decimals
+    uint256 public minHealth = 1080000000000000000; // 1.08 with 18 decimals this is slighly above 70% tvl
     uint256 public minRebalanceAmount = 50000000; // 0.5 should be changed based on decimals (btc has 8)
+    
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
@@ -83,6 +87,11 @@ contract Strategy is BaseStrategy {
         minHealth = newMinHealth;
     }
 
+    function setMaxDiscount(uint256 newMaxDiscount) external onlyKeepers {
+        require(newMaxDiscount >= 0 && newMaxDiscount <= MAX_BPS, "Need higher health");
+        maxDiscount = newMaxDiscount;
+    }
+
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
     function name() external view override returns (string memory) {
@@ -92,7 +101,10 @@ contract Strategy is BaseStrategy {
 
     function estimatedTotalAssets() public view override returns (uint256) {
         // Balance of want + balance in AAVE
-        return want.balanceOf(address(this)).add(deposited()).sub(borrowed());
+        uint256 liquidBalance = want.balanceOf(address(this)).add(deposited()).sub(borrowed());
+        
+        // Return balance + reward
+        return liquidBalance.add(valueOfRewards());
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -172,9 +184,13 @@ contract Strategy is BaseStrategy {
             LENDING_POOL.repay(address(want), wantEarned, 2, address(this));
 
             _loss = toRepay.sub(wantEarned);
+
+            // Notice that once the strats starts loosing funds here, you should probably retire it as it's not profitable
         } else {
-            // We made money or are event
-            uint256 repaid = toRepay >= wantEarned ? wantEarned : toRepay;
+            // We made money or are even
+
+            // Let's repay the debtBelowHealth
+            uint256 repaid = toRepay;
 
             _profit = wantEarned.sub(repaid);
 
@@ -197,7 +213,22 @@ contract Strategy is BaseStrategy {
         }
     }
 
-    function _claimRewardsAndGetMoreWant() internal {
+    function balanceOfRewards() view public returns (uint256) {
+        // Get rewards
+        address[] memory assets = new address[](2);
+        assets[0] = address(aToken);
+        assets[1] = address(vToken);
+
+        uint256 totalRewards = INCENTIVES_CONTROLLER.getRewardsBalance(assets, address(this));
+        return totalRewards;
+    }
+
+    function valueOfRewards() view public returns (uint256) {
+        return ethToWant(AAVEToETH(balanceOfRewards()));
+    }
+
+    // Get stkAAVE
+    function _claimRewards() internal {
         // Get rewards
         address[] memory assets = new address[](2);
         assets[0] = address(aToken);
@@ -209,16 +240,13 @@ contract Strategy is BaseStrategy {
             type(uint256).max,
             address(this)
         );
+    }
 
+    function _fromSTKAAVEToAAVE(uint256 rewardsAmount, uint256 minOut) internal {
         uint256 rewardsAmount = reward.balanceOf(address(this));
-
-        if (rewardsAmount == 0) {
-            return;
-        }
 
         // Swap Rewards in UNIV3
         // NOTE: Unoptimized, can be frontrun and most importantly this pool is low liquidity
-
         ISwapRouter.ExactInputSingleParams memory fromRewardToAAVEParams =
             ISwapRouter.ExactInputSingleParams(
                 address(reward),
@@ -227,14 +255,14 @@ contract Strategy is BaseStrategy {
                 address(this),
                 now,
                 rewardsAmount, // wei
-                0,
+                minOut,
                 0
             );
         ROUTER.exactInputSingle(fromRewardToAAVEParams);
+    }
 
-        uint256 aaveToSwap = AAVE_TOKEN.balanceOf(address(this));
-
-        // We now have AAVE tokens, let's get wBTC
+    function _fromAAVEToWant(uint256 amountIn, uint256 minOut) internal {
+        // We now have AAVE tokens, let's get want
         bytes memory path =
             abi.encodePacked(
                 address(AAVE_TOKEN),
@@ -249,10 +277,28 @@ contract Strategy is BaseStrategy {
                 path,
                 address(this),
                 now,
-                aaveToSwap,
-                0
+                amountIn,
+                minOut
             );
         ROUTER.exactInput(fromAAVETowBTCParams);
+    }
+    function _claimRewardsAndGetMoreWant() internal {
+
+        _claimRewards();
+
+        uint256 rewardsAmount = reward.balanceOf(address(this));
+
+        if (rewardsAmount == 0) {
+            return;
+        }
+
+        // Specify a min out
+        uint256 minAAVEOut = rewardsAmount.mul(maxDiscount).div(MAX_BPS);
+        _fromSTKAAVEToAAVE(rewardsAmount, minAAVEOut);
+
+        uint256 aaveToSwap = AAVE_TOKEN.balanceOf(address(this));
+        // No min = Can be frontrun // If it's a concern use manual commands below
+        _fromAAVEToWant(aaveToSwap, 0);
     }
 
     function liquidatePosition(uint256 _amountNeeded)
@@ -365,8 +411,19 @@ contract Strategy is BaseStrategy {
         // Multiply first to keep rounding
         uint256 priceInWant = _amtInWei.mul(10**DECIMALS).div(priceInEth);
 
-        // TODO create an accurate price oracle
         return priceInWant;
+    }
+    
+    function AAVEToETH(uint256 _amt) public view returns (uint256) {
+        address priceOracle = ADDRESS_PROVIDER.getPriceOracle();
+        uint256 priceInEth =
+            IPriceOracle(priceOracle).getAssetPrice(address(AAVE_TOKEN));
+
+        // Price in ETH
+        // AMT * Price in ETH / Decimals
+        uint256 aaveToEth = _amt.mul(priceInEth).div(10**18);
+
+        return aaveToEth;
     }
 
     /* Leverage functions */
@@ -469,14 +526,6 @@ contract Strategy is BaseStrategy {
         }
     }
 
-    // Emergency function that we can use to deleverage manually if something is broken
-    function manualWithdrawStepFromAAVE(uint256 canRepay)
-        public
-        onlyVaultManagers
-    {
-        _withdrawStepFromAAVE(canRepay);
-    }
-
     // Withdraw and Repay AAVE Debt
     function _withdrawStepFromAAVE(uint256 canRepay) internal {
         if (canRepay > 0) {
@@ -510,4 +559,63 @@ contract Strategy is BaseStrategy {
 
         return inWant;
     }
+
+    /** Manual Functions */
+
+    /** Leverage Manual Functions */
+    // Emergency function to immediately deleverage to 0
+    function manualDivestFromAAVE() public onlyVaultManagers{
+        _divestFromAAVE();
+    }
+
+    // Manually perform 5 loops to lever up
+    function manualLeverUp() public onlyVaultManagers {
+        _invest();
+    }
+
+    // Emergency function that we can use to deleverage manually if something is broken
+    // If something goes wrong, just try smaller and smaller can repay amounts
+    function manualWithdrawStepFromAAVE(uint256 toRepay)
+        public
+        onlyVaultManagers
+    {
+        _withdrawStepFromAAVE(toRepay);
+    }
+
+    // Take some funds from manager and use them to repay
+    // Useful if you ever go below 1 HF and somehow you didn't get liquidated
+    function manuallyRepayFromManager(uint256 toRepay) public onlyVaultManagers {
+        want.safeTransferFrom(msg.sender, address(this), toRepay);
+        LENDING_POOL.repay(address(want), toRepay, 2, address(this));
+    }
+
+    /** DCA Manual Functions */
+
+    // Get the rewards
+    function manuallyClaimRewards() public onlyVaultManagers {
+        _claimRewards();
+    }
+
+    // Swap from stkAAVE to AAVE
+    ///@param amountToSwap Amount of stkAAVE to Swap, NOTE: You have to calculate the amount!!
+    ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
+    function manuallySwapFromStkAAVEToAAVE(uint256 amountToSwap, uint256 multiplierInWei) public onlyVaultManagers {
+        uint256 amountOutMinimum = amountToSwap.mul(multiplierInWei).div(10 ** 18);
+
+        if (rewardsAmount == 0) {
+            return;
+        }
+
+        _fromSTKAAVEToAAVE(amountToSwap, amountOutMinimum);
+    }
+
+    // Swap from AAVE to Want
+    ///@param amountToSwap Amount of AAVE to Swap, NOTE: You have to calculate the amount!!
+    ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
+    function manuallySwapFromAAVEToWant(uint256 amountToSwap, uint256 multiplierInWei) public onlyVaultManagers {
+        uint256 amountOutMinimum = amountToSwap.mul(multiplierInWei).div(10 ** 18);
+
+        _fromAAVEToWant(amountToSwap, amountOutMinimum);
+    }
+
 }
