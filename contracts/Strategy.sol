@@ -63,13 +63,12 @@ contract Strategy is BaseStrategy {
     uint256 public immutable DECIMALS = 8; // For toETH conversion
 
     // Swap tollerance for stkAAVE to AAVE, in BPS
-    uint256 public maxDiscount = 500; // 5% 
+    uint256 public maxDiscount = 500; // 5%
 
     // Leverage
     uint256 public constant MAX_BPS = 10000;
     uint256 public minHealth = 1080000000000000000; // 1.08 with 18 decimals this is slighly above 70% tvl
     uint256 public minRebalanceAmount = 50000000; // 0.5 should be changed based on decimals (btc has 8)
-    
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
@@ -88,7 +87,10 @@ contract Strategy is BaseStrategy {
     }
 
     function setMaxDiscount(uint256 newMaxDiscount) external onlyKeepers {
-        require(newMaxDiscount >= 0 && newMaxDiscount <= MAX_BPS, "Need higher health");
+        require(
+            newMaxDiscount >= 0 && newMaxDiscount <= MAX_BPS,
+            "Need higher health"
+        );
         maxDiscount = newMaxDiscount;
     }
 
@@ -101,8 +103,9 @@ contract Strategy is BaseStrategy {
 
     function estimatedTotalAssets() public view override returns (uint256) {
         // Balance of want + balance in AAVE
-        uint256 liquidBalance = want.balanceOf(address(this)).add(deposited()).sub(borrowed());
-        
+        uint256 liquidBalance =
+            want.balanceOf(address(this)).add(deposited()).sub(borrowed());
+
         // Return balance + reward
         return liquidBalance.add(valueOfRewards());
     }
@@ -213,17 +216,18 @@ contract Strategy is BaseStrategy {
         }
     }
 
-    function balanceOfRewards() view public returns (uint256) {
+    function balanceOfRewards() public view returns (uint256) {
         // Get rewards
         address[] memory assets = new address[](2);
         assets[0] = address(aToken);
         assets[1] = address(vToken);
 
-        uint256 totalRewards = INCENTIVES_CONTROLLER.getRewardsBalance(assets, address(this));
+        uint256 totalRewards =
+            INCENTIVES_CONTROLLER.getRewardsBalance(assets, address(this));
         return totalRewards;
     }
 
-    function valueOfRewards() view public returns (uint256) {
+    function valueOfRewards() public view returns (uint256) {
         return ethToWant(AAVEToETH(balanceOfRewards()));
     }
 
@@ -242,7 +246,9 @@ contract Strategy is BaseStrategy {
         );
     }
 
-    function _fromSTKAAVEToAAVE(uint256 rewardsAmount, uint256 minOut) internal {
+    function _fromSTKAAVEToAAVE(uint256 rewardsAmount, uint256 minOut)
+        internal
+    {
         uint256 rewardsAmount = reward.balanceOf(address(this));
 
         // Swap Rewards in UNIV3
@@ -282,8 +288,8 @@ contract Strategy is BaseStrategy {
             );
         ROUTER.exactInput(fromAAVETowBTCParams);
     }
-    function _claimRewardsAndGetMoreWant() internal {
 
+    function _claimRewardsAndGetMoreWant() internal {
         _claimRewards();
 
         uint256 rewardsAmount = reward.balanceOf(address(this));
@@ -413,7 +419,7 @@ contract Strategy is BaseStrategy {
 
         return priceInWant;
     }
-    
+
     function AAVEToETH(uint256 _amt) public view returns (uint256) {
         address priceOracle = ADDRESS_PROVIDER.getPriceOracle();
         uint256 priceInEth =
@@ -564,7 +570,7 @@ contract Strategy is BaseStrategy {
 
     /** Leverage Manual Functions */
     // Emergency function to immediately deleverage to 0
-    function manualDivestFromAAVE() public onlyVaultManagers{
+    function manualDivestFromAAVE() public onlyVaultManagers {
         _divestFromAAVE();
     }
 
@@ -584,7 +590,10 @@ contract Strategy is BaseStrategy {
 
     // Take some funds from manager and use them to repay
     // Useful if you ever go below 1 HF and somehow you didn't get liquidated
-    function manuallyRepayFromManager(uint256 toRepay) public onlyVaultManagers {
+    function manuallyRepayFromManager(uint256 toRepay)
+        public
+        onlyVaultManagers
+    {
         want.safeTransferFrom(msg.sender, address(this), toRepay);
         LENDING_POOL.repay(address(want), toRepay, 2, address(this));
     }
@@ -599,8 +608,12 @@ contract Strategy is BaseStrategy {
     // Swap from stkAAVE to AAVE
     ///@param amountToSwap Amount of stkAAVE to Swap, NOTE: You have to calculate the amount!!
     ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
-    function manuallySwapFromStkAAVEToAAVE(uint256 amountToSwap, uint256 multiplierInWei) public onlyVaultManagers {
-        uint256 amountOutMinimum = amountToSwap.mul(multiplierInWei).div(10 ** 18);
+    function manuallySwapFromStkAAVEToAAVE(
+        uint256 amountToSwap,
+        uint256 multiplierInWei
+    ) public onlyVaultManagers {
+        uint256 amountOutMinimum =
+            amountToSwap.mul(multiplierInWei).div(10**18);
 
         if (rewardsAmount == 0) {
             return;
@@ -612,10 +625,13 @@ contract Strategy is BaseStrategy {
     // Swap from AAVE to Want
     ///@param amountToSwap Amount of AAVE to Swap, NOTE: You have to calculate the amount!!
     ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
-    function manuallySwapFromAAVEToWant(uint256 amountToSwap, uint256 multiplierInWei) public onlyVaultManagers {
-        uint256 amountOutMinimum = amountToSwap.mul(multiplierInWei).div(10 ** 18);
+    function manuallySwapFromAAVEToWant(
+        uint256 amountToSwap,
+        uint256 multiplierInWei
+    ) public onlyVaultManagers {
+        uint256 amountOutMinimum =
+            amountToSwap.mul(multiplierInWei).div(10**18);
 
         _fromAAVEToWant(amountToSwap, amountOutMinimum);
     }
-
 }
