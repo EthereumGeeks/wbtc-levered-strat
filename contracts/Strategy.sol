@@ -611,10 +611,7 @@ contract Strategy is BaseStrategy {
 
     // Take some funds from manager and use them to repay
     // Useful if you ever go below 1 HF and somehow you didn't get liquidated
-    function manualRepayFromManager(uint256 toRepay)
-        public
-        onlyVaultManagers
-    {
+    function manualRepayFromManager(uint256 toRepay) public onlyVaultManagers {
         want.safeTransferFrom(msg.sender, address(this), toRepay);
         LENDING_POOL.repay(address(want), toRepay, 2, address(this));
     }

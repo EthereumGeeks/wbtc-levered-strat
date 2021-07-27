@@ -1,6 +1,7 @@
 import pytest
 from brownie import config, chain, Contract
 
+
 @pytest.fixture
 def gov(accounts):
     yield accounts.at("0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52", force=True)
@@ -65,6 +66,7 @@ def reward():
     token_address = "0x4da27a545c0c5b758a6ba100e3a049001de870f5"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
     yield Contract(token_address)
 
+
 @pytest.fixture
 def aave():
     token_address = "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
@@ -78,10 +80,10 @@ def amount(accounts, token, user, gov, management):
     # it impersonate an exchange address to use it's funds.
     reserve = accounts.at("0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656", force=True)
     token.transfer(user, amount, {"from": reserve})
-    
+
     ## Also send a little bit to gov for test_manual_operation
-    token.transfer(gov, 100 * 10 ** token.decimals(), {"from": reserve} )
-    token.transfer(management, 100 * 10 ** token.decimals(), {"from": reserve} )
+    token.transfer(gov, 100 * 10 ** token.decimals(), {"from": reserve})
+    token.transfer(management, 100 * 10 ** token.decimals(), {"from": reserve})
     yield amount
 
 
@@ -120,6 +122,7 @@ def strategy(strategist, keeper, vault, Strategy, gov):
 def RELATIVE_APPROX():
     yield 1e-5
 
+
 @pytest.fixture
 def levered_strat(vault, user, token, strategy, RELATIVE_APPROX, amount):
     # Deposit to the vault and harvest
@@ -130,6 +133,7 @@ def levered_strat(vault, user, token, strategy, RELATIVE_APPROX, amount):
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
     chain.sleep(1)
     return strategy
+
 
 ## Forces reset before each test
 @pytest.fixture(autouse=True)
