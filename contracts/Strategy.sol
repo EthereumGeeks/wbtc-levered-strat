@@ -18,6 +18,7 @@ import {
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+import {IStakedAave} from "../interfaces/aave/IStakedAave.sol";
 import {ILendingPool} from "../interfaces/aave/ILendingPool.sol";
 import {
     IAaveIncentivesController
@@ -628,6 +629,7 @@ contract Strategy is BaseStrategy {
     // You can use this if you believe V3 Pool is too illiquid
     function manuallyCooldownRewards() public onlyVaultManagers {
         IStakedAave stkAAVE = IStakedAave(address(reward));
+        stkAAVE.claimRewards(address(this), type(uint256).max);
         stkAAVE.cooldown();
     }
 
@@ -635,7 +637,7 @@ contract Strategy is BaseStrategy {
     // You can use this if you believe V3 Pool is too illiquid
     function manuallyRedeemRewards() public onlyVaultManagers {
         IStakedAave stkAAVE = IStakedAave(address(reward));
-        stkAAVE.redeem();
+        stkAAVE.redeem(address(this), type(uint256).max);
     }
 
     // Swap from stkAAVE to AAVE
