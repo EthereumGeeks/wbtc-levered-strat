@@ -637,6 +637,7 @@ contract Strategy is BaseStrategy {
     // You can use this if you believe V3 Pool is too illiquid
     function manuallyRedeemRewards() public onlyVaultManagers {
         IStakedAave stkAAVE = IStakedAave(address(reward));
+        stkAAVE.claimRewards(address(this), type(uint256).max);
         stkAAVE.redeem(address(this), type(uint256).max);
     }
 
