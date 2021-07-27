@@ -10,6 +10,7 @@ import {
     BaseStrategy,
     StrategyParams
 } from "@yearnvaults/contracts/BaseStrategy.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     SafeERC20,
     SafeMath,
@@ -25,6 +26,8 @@ import {
     ILendingPoolAddressesProvider
 } from "../interfaces/aave/ILendingPoolAddressesProvider.sol";
 import {IPriceOracle} from "../interfaces/aave/IPriceOracle.sol";
+import {DataTypes} from "../interfaces/aave/types/DataTypes.sol";
+
 import {ISwapRouter} from "../interfaces/uniswap/ISwapRouter.sol";
 
 contract Strategy is BaseStrategy {
@@ -32,24 +35,25 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    IERC20 public constant aToken =
-        IERC20(0x9ff58f4fFB29fA2266Ab25e75e2A8b3503311656); // Token we provide liquidity with
-    IERC20 public constant vToken =
-        IERC20(0x9c39809Dec7F95F5e0713634a4D0701329B3b4d2); // Variable Debt
+    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER = ILendingPoolAddressesProvider(
+            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
+        );
+    
+    IERC20 public immutable aToken;
+    IERC20 public immutable vToken;
+    ILendingPool public immutable LENDING_POOL;
 
+    uint256 public immutable DECIMALS; // For toETH conversion
+    
+    // stkAAVE
     IERC20 public constant reward =
         IERC20(0x4da27a545c0c5B758a6BA100e3a049001de870f5); // Token we farm and swap to want / aToken
+    
 
-    ILendingPool public constant LENDING_POOL =
-        ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
-
+    // Hardhcoded from the Liquidity Mining docs: https://docs.aave.com/developers/guides/liquidity-mining
     IAaveIncentivesController public constant INCENTIVES_CONTROLLER =
         IAaveIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
 
-    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER =
-        ILendingPoolAddressesProvider(
-            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
-        );
 
     // For Swapping
     ISwapRouter public constant ROUTER =
@@ -60,7 +64,7 @@ contract Strategy is BaseStrategy {
     IERC20 public constant WETH_TOKEN =
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    uint256 public immutable DECIMALS = 8; // For toETH conversion
+    
 
     // Swap tollerance for stkAAVE to AAVE, in BPS
     uint256 public maxDiscount = 500; // 5%
@@ -76,7 +80,25 @@ contract Strategy is BaseStrategy {
         profitFactor = 100;
         debtThreshold = 0;
 
-        want.safeApprove(address(LENDING_POOL), type(uint256).max);
+        // Get lending Pool
+        ILendingPool lendingPool = ILendingPool(ADDRESS_PROVIDER.getLendingPool());
+
+        // Set lending pool as immutable
+        LENDING_POOL = lendingPool;
+
+        // Get Tokens Addresses
+        DataTypes.ReserveData memory data = lendingPool.getReserveData(address(want));
+
+        // Get aToken  
+        aToken = IERC20(data.aTokenAddress);
+    
+        // Get vToken
+        vToken = IERC20(data.variableDebtTokenAddress);
+
+        // Get Decimals
+        DECIMALS = ERC20(address(want)).decimals();
+
+        want.safeApprove(address(lendingPool), type(uint256).max);
         reward.safeApprove(address(ROUTER), type(uint256).max);
         AAVE_TOKEN.safeApprove(address(ROUTER), type(uint256).max);
     }
@@ -249,7 +271,6 @@ contract Strategy is BaseStrategy {
     function _fromSTKAAVEToAAVE(uint256 rewardsAmount, uint256 minOut)
         internal
     {
-        uint256 rewardsAmount = reward.balanceOf(address(this));
 
         // Swap Rewards in UNIV3
         // NOTE: Unoptimized, can be frontrun and most importantly this pool is low liquidity
@@ -614,10 +635,6 @@ contract Strategy is BaseStrategy {
     ) public onlyVaultManagers {
         uint256 amountOutMinimum =
             amountToSwap.mul(multiplierInWei).div(10**18);
-
-        if (rewardsAmount == 0) {
-            return;
-        }
 
         _fromSTKAAVEToAAVE(amountToSwap, amountOutMinimum);
     }
