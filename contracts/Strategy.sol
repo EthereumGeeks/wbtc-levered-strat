@@ -64,8 +64,8 @@ contract Strategy is BaseStrategy {
     IERC20 public constant WETH_TOKEN =
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    // Swap tollerance for stkAAVE to AAVE, in BPS
-    uint256 public maxDiscount = 500; // 5%
+    // Min Price we tollerate when swapping from stkAAVE to AAVE and from AAVE to wBTC
+    uint256 public minPrice = 9500; // 95%
 
     // Should we harvest before prepareMigration
     bool public harvestBeforeMigrate = true;
@@ -114,20 +114,26 @@ contract Strategy is BaseStrategy {
         minHealth = newMinHealth;
     }
 
-    function setHarvestBeforeMigrate(bool newHarvestBeforeMigrate) external onlyKeepers {
+    function setHarvestBeforeMigrate(bool newHarvestBeforeMigrate)
+        external
+        onlyKeepers
+    {
         harvestBeforeMigrate = newHarvestBeforeMigrate;
     }
 
-    function setCheckSlippageOnHarvest(bool newCheckSlippageOnHarvest) external onlyKeepers {
+    function setCheckSlippageOnHarvest(bool newCheckSlippageOnHarvest)
+        external
+        onlyKeepers
+    {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
-    function setMaxDiscount(uint256 newMaxDiscount) external onlyKeepers {
+    function setMinPrice(uint256 newMinPrice) external onlyKeepers {
         require(
-            newMaxDiscount >= 0 && newMaxDiscount <= MAX_BPS,
-            "Need higher health"
+            newMinPrice >= 0 && newMinPrice <= MAX_BPS,
+            "Need higher minPrice"
         );
-        maxDiscount = newMaxDiscount;
+        minPrice = newMinPrice;
     }
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
@@ -263,7 +269,11 @@ contract Strategy is BaseStrategy {
         return totalRewards;
     }
 
-    function valueOfAAVEToWant(uint256 aaveAmount) public view returns (uint256) {
+    function valueOfAAVEToWant(uint256 aaveAmount)
+        public
+        view
+        returns (uint256)
+    {
         return ethToWant(AAVEToETH(aaveAmount));
     }
 
@@ -337,14 +347,16 @@ contract Strategy is BaseStrategy {
         }
 
         // Specify a min out
-        uint256 minAAVEOut = rewardsAmount.mul(maxDiscount).div(MAX_BPS);
+        uint256 minAAVEOut = rewardsAmount.mul(minPrice).div(MAX_BPS);
         _fromSTKAAVEToAAVE(rewardsAmount, minAAVEOut);
 
         uint256 aaveToSwap = AAVE_TOKEN.balanceOf(address(this));
 
         uint256 minWantOut = 0;
-        if(checkSlippageOnHarvest) {
-            minWantOut = valueOfAAVEToWant(aaveToSwap).mul(maxDiscount).div(MAX_BPS);
+        if (checkSlippageOnHarvest) {
+            minWantOut = valueOfAAVEToWant(aaveToSwap).mul(minPrice).div(
+                MAX_BPS
+            );
         }
 
         _fromAAVEToWant(aaveToSwap, minWantOut);
@@ -393,11 +405,10 @@ contract Strategy is BaseStrategy {
         //Divest all
         _divestFromAAVE();
 
-        if(harvestBeforeMigrate) {
+        if (harvestBeforeMigrate) {
             // Harvest rewards one last time
             _claimRewardsAndGetMoreWant();
         }
-
 
         // Just in case we don't fully liquidate to want
         if (aToken.balanceOf(address(this)) > 0) {
