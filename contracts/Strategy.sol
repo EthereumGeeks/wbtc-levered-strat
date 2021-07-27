@@ -135,7 +135,7 @@ contract Strategy is BaseStrategy {
             uint256 maxRepay = want.balanceOf(address(this));
             if (_debtOutstanding > maxRepay) {
                 // we can't pay all, means we lost some
-                _loss = _loss.add(_debtOutstanding.sub(maxRepay));
+                _loss = _debtOutstanding.sub(maxRepay);
                 _debtPayment = maxRepay;
             } else {
                 // We can pay all, let's do it
