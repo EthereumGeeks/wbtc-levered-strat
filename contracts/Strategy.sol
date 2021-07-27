@@ -67,6 +67,12 @@ contract Strategy is BaseStrategy {
     // Swap tollerance for stkAAVE to AAVE, in BPS
     uint256 public maxDiscount = 500; // 5%
 
+    // Should we harvest before prepareMigration
+    bool public harvestBeforeMigrate = true;
+
+    // Should we ensure the swap will be within slippage params before performing it during normal harvest?
+    bool public checkSlippageOnHarvest = true;
+
     // Leverage
     uint256 public constant MAX_BPS = 10000;
     uint256 public minHealth = 1080000000000000000; // 1.08 with 18 decimals this is slighly above 70% tvl
@@ -106,6 +112,14 @@ contract Strategy is BaseStrategy {
     function setMinHealth(uint256 newMinHealth) external onlyKeepers {
         require(newMinHealth >= 1000000000000000000, "Need higher health");
         minHealth = newMinHealth;
+    }
+
+    function setHarvestBeforeMigrate(bool newHarvestBeforeMigrate) external onlyKeepers {
+        harvestBeforeMigrate = newHarvestBeforeMigrate;
+    }
+
+    function setCheckSlippageOnHarvest(bool newCheckSlippageOnHarvest) external onlyKeepers {
+        checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
     function setMaxDiscount(uint256 newMaxDiscount) external onlyKeepers {
@@ -249,8 +263,12 @@ contract Strategy is BaseStrategy {
         return totalRewards;
     }
 
+    function valueOfAAVEToWant(uint256 aaveAmount) public view returns (uint256) {
+        return ethToWant(AAVEToETH(aaveAmount));
+    }
+
     function valueOfRewards() public view returns (uint256) {
-        return ethToWant(AAVEToETH(balanceOfRewards()));
+        return valueOfAAVEToWant(balanceOfRewards());
     }
 
     // Get stkAAVE
@@ -323,8 +341,13 @@ contract Strategy is BaseStrategy {
         _fromSTKAAVEToAAVE(rewardsAmount, minAAVEOut);
 
         uint256 aaveToSwap = AAVE_TOKEN.balanceOf(address(this));
-        // No min = Can be frontrun // If it's a concern use manual commands below
-        _fromAAVEToWant(aaveToSwap, 0);
+
+        uint256 minWantOut = 0;
+        if(checkSlippageOnHarvest) {
+            minWantOut = valueOfAAVEToWant(aaveToSwap).mul(maxDiscount).div(MAX_BPS);
+        }
+
+        _fromAAVEToWant(aaveToSwap, minWantOut);
     }
 
     function liquidatePosition(uint256 _amountNeeded)
@@ -370,8 +393,11 @@ contract Strategy is BaseStrategy {
         //Divest all
         _divestFromAAVE();
 
-        // Harvest rewards one last time
-        _claimRewardsAndGetMoreWant();
+        if(harvestBeforeMigrate) {
+            // Harvest rewards one last time
+            _claimRewardsAndGetMoreWant();
+        }
+
 
         // Just in case we don't fully liquidate to want
         if (aToken.balanceOf(address(this)) > 0) {
