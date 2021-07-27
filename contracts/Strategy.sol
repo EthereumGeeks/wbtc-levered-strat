@@ -595,6 +595,7 @@ contract Strategy is BaseStrategy {
     }
 
     // Manually perform 5 loops to lever up
+    // Safe because it's capped by canBorrow
     function manualLeverUp() public onlyVaultManagers {
         _invest();
     }
@@ -610,7 +611,7 @@ contract Strategy is BaseStrategy {
 
     // Take some funds from manager and use them to repay
     // Useful if you ever go below 1 HF and somehow you didn't get liquidated
-    function manuallyRepayFromManager(uint256 toRepay)
+    function manualRepayFromManager(uint256 toRepay)
         public
         onlyVaultManagers
     {
@@ -621,13 +622,13 @@ contract Strategy is BaseStrategy {
     /** DCA Manual Functions */
 
     // Get the rewards
-    function manuallyClaimRewards() public onlyVaultManagers {
+    function manualClaimRewards() public onlyVaultManagers {
         _claimRewards();
     }
 
     // Initiate 10 days cooldown period manually
     // You can use this if you believe V3 Pool is too illiquid
-    function manuallyCooldownRewards() public onlyVaultManagers {
+    function manualCooldownRewards() public onlyVaultManagers {
         IStakedAave stkAAVE = IStakedAave(address(reward));
         stkAAVE.claimRewards(address(this), type(uint256).max);
         stkAAVE.cooldown();
@@ -635,7 +636,7 @@ contract Strategy is BaseStrategy {
 
     // Manually redeem rewards, claiming AAVE
     // You can use this if you believe V3 Pool is too illiquid
-    function manuallyRedeemRewards() public onlyVaultManagers {
+    function manualRedeemRewards() public onlyVaultManagers {
         IStakedAave stkAAVE = IStakedAave(address(reward));
         stkAAVE.claimRewards(address(this), type(uint256).max);
         stkAAVE.redeem(address(this), type(uint256).max);
@@ -644,7 +645,7 @@ contract Strategy is BaseStrategy {
     // Swap from stkAAVE to AAVE
     ///@param amountToSwap Amount of stkAAVE to Swap, NOTE: You have to calculate the amount!!
     ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
-    function manuallySwapFromStkAAVEToAAVE(
+    function manualSwapFromStkAAVEToAAVE(
         uint256 amountToSwap,
         uint256 multiplierInWei
     ) public onlyVaultManagers {
@@ -657,7 +658,7 @@ contract Strategy is BaseStrategy {
     // Swap from AAVE to Want
     ///@param amountToSwap Amount of AAVE to Swap, NOTE: You have to calculate the amount!!
     ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
-    function manuallySwapFromAAVEToWant(
+    function manualSwapFromAAVEToWant(
         uint256 amountToSwap,
         uint256 multiplierInWei
     ) public onlyVaultManagers {
