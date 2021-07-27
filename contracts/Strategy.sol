@@ -10,7 +10,7 @@ import {
     BaseStrategy,
     StrategyParams
 } from "@yearnvaults/contracts/BaseStrategy.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     SafeERC20,
     SafeMath,
@@ -35,25 +35,24 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER = ILendingPoolAddressesProvider(
+    ILendingPoolAddressesProvider public constant ADDRESS_PROVIDER =
+        ILendingPoolAddressesProvider(
             0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
         );
-    
+
     IERC20 public immutable aToken;
     IERC20 public immutable vToken;
     ILendingPool public immutable LENDING_POOL;
 
     uint256 public immutable DECIMALS; // For toETH conversion
-    
+
     // stkAAVE
     IERC20 public constant reward =
         IERC20(0x4da27a545c0c5B758a6BA100e3a049001de870f5); // Token we farm and swap to want / aToken
-    
 
     // Hardhcoded from the Liquidity Mining docs: https://docs.aave.com/developers/guides/liquidity-mining
     IAaveIncentivesController public constant INCENTIVES_CONTROLLER =
         IAaveIncentivesController(0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5);
-
 
     // For Swapping
     ISwapRouter public constant ROUTER =
@@ -63,8 +62,6 @@ contract Strategy is BaseStrategy {
         IERC20(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
     IERC20 public constant WETH_TOKEN =
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-
-    
 
     // Swap tollerance for stkAAVE to AAVE, in BPS
     uint256 public maxDiscount = 500; // 5%
@@ -81,17 +78,19 @@ contract Strategy is BaseStrategy {
         debtThreshold = 0;
 
         // Get lending Pool
-        ILendingPool lendingPool = ILendingPool(ADDRESS_PROVIDER.getLendingPool());
+        ILendingPool lendingPool =
+            ILendingPool(ADDRESS_PROVIDER.getLendingPool());
 
         // Set lending pool as immutable
         LENDING_POOL = lendingPool;
 
         // Get Tokens Addresses
-        DataTypes.ReserveData memory data = lendingPool.getReserveData(address(want));
+        DataTypes.ReserveData memory data =
+            lendingPool.getReserveData(address(want));
 
-        // Get aToken  
+        // Get aToken
         aToken = IERC20(data.aTokenAddress);
-    
+
         // Get vToken
         vToken = IERC20(data.variableDebtTokenAddress);
 
@@ -271,7 +270,6 @@ contract Strategy is BaseStrategy {
     function _fromSTKAAVEToAAVE(uint256 rewardsAmount, uint256 minOut)
         internal
     {
-
         // Swap Rewards in UNIV3
         // NOTE: Unoptimized, can be frontrun and most importantly this pool is low liquidity
         ISwapRouter.ExactInputSingleParams memory fromRewardToAAVEParams =
