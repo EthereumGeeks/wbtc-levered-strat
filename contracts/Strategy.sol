@@ -624,6 +624,20 @@ contract Strategy is BaseStrategy {
         _claimRewards();
     }
 
+    // Initiate 10 days cooldown period manually
+    // You can use this if you believe V3 Pool is too illiquid
+    function manuallyCooldownRewards() public onlyVaultManagers {
+        IStakedAave stkAAVE = IStakedAave(address(reward));
+        stkAAVE.cooldown();
+    }
+
+    // Manually redeem rewards, claiming AAVE
+    // You can use this if you believe V3 Pool is too illiquid
+    function manuallyRedeemRewards() public onlyVaultManagers {
+        IStakedAave stkAAVE = IStakedAave(address(reward));
+        stkAAVE.redeem();
+    }
+
     // Swap from stkAAVE to AAVE
     ///@param amountToSwap Amount of stkAAVE to Swap, NOTE: You have to calculate the amount!!
     ///@param multiplierInWei pricePerToken including slippage, will be divided by 10 ** 18
