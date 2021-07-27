@@ -64,8 +64,10 @@ contract Strategy is BaseStrategy {
     IERC20 public constant WETH_TOKEN =
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    // Min Price we tollerate when swapping from stkAAVE to AAVE and from AAVE to wBTC
-    uint256 public minPrice = 9500; // 95%
+    // Min Price we tollerate when swapping from stkAAVE to AAVE 
+    uint256 public minStkAAVEPRice = 9500; // 95%
+
+    uint256 public minAAVEToWantPrice = 8000; // 80% // Seems like Oracle is slightly off
 
     // Should we harvest before prepareMigration
     bool public harvestBeforeMigrate = true;
@@ -128,13 +130,21 @@ contract Strategy is BaseStrategy {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
-    function setMinPrice(uint256 newMinPrice) external onlyKeepers {
+    function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice) external onlyKeepers {
         require(
-            newMinPrice >= 0 && newMinPrice <= MAX_BPS,
-            "Need higher minPrice"
+            newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS
         );
-        minPrice = newMinPrice;
+        minStkAAVEPRice = newMinStkAAVEPRice;
     }
+
+    function setMinPrice(uint256 newMinAAVEToWantPrice) external onlyKeepers {
+        require(
+            newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS
+        );
+        minAAVEToWantPrice = newMinAAVEToWantPrice;
+    }
+
+    
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
@@ -347,14 +357,14 @@ contract Strategy is BaseStrategy {
         }
 
         // Specify a min out
-        uint256 minAAVEOut = rewardsAmount.mul(minPrice).div(MAX_BPS);
+        uint256 minAAVEOut = rewardsAmount.mul(minStkAAVEPRice).div(MAX_BPS);
         _fromSTKAAVEToAAVE(rewardsAmount, minAAVEOut);
 
         uint256 aaveToSwap = AAVE_TOKEN.balanceOf(address(this));
 
         uint256 minWantOut = 0;
         if (checkSlippageOnHarvest) {
-            minWantOut = valueOfAAVEToWant(aaveToSwap).mul(minPrice).div(
+            minWantOut = valueOfAAVEToWant(aaveToSwap).mul(minAAVEToWantPrice).div(
                 MAX_BPS
             );
         }
