@@ -64,7 +64,7 @@ contract Strategy is BaseStrategy {
     IERC20 public constant WETH_TOKEN =
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    // Min Price we tollerate when swapping from stkAAVE to AAVE 
+    // Min Price we tollerate when swapping from stkAAVE to AAVE
     uint256 public minStkAAVEPRice = 9500; // 95%
 
     uint256 public minAAVEToWantPrice = 8000; // 80% // Seems like Oracle is slightly off
@@ -130,21 +130,18 @@ contract Strategy is BaseStrategy {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
-    function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice) external onlyKeepers {
-        require(
-            newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS
-        );
+    function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice)
+        external
+        onlyKeepers
+    {
+        require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS);
         minStkAAVEPRice = newMinStkAAVEPRice;
     }
 
     function setMinPrice(uint256 newMinAAVEToWantPrice) external onlyKeepers {
-        require(
-            newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS
-        );
+        require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS);
         minAAVEToWantPrice = newMinAAVEToWantPrice;
     }
-
-    
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
@@ -364,9 +361,9 @@ contract Strategy is BaseStrategy {
 
         uint256 minWantOut = 0;
         if (checkSlippageOnHarvest) {
-            minWantOut = valueOfAAVEToWant(aaveToSwap).mul(minAAVEToWantPrice).div(
-                MAX_BPS
-            );
+            minWantOut = valueOfAAVEToWant(aaveToSwap)
+                .mul(minAAVEToWantPrice)
+                .div(MAX_BPS);
         }
 
         _fromAAVEToWant(aaveToSwap, minWantOut);
