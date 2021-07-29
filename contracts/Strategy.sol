@@ -253,7 +253,7 @@ contract Strategy is BaseStrategy {
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
-        // TODO: Do something to invest excess `want` tokens (from the Vault) into your positions
+        // Do something to invest excess `want` tokens (from the Vault) into your positions
         // NOTE: Try to adjust positions so that `_debtOutstanding` can be freed up on *next* harvest (not immediately)
         uint256 wantAvailable = want.balanceOf(address(this));
         if (wantAvailable > _debtOutstanding) {
@@ -374,7 +374,7 @@ contract Strategy is BaseStrategy {
         override
         returns (uint256 _liquidatedAmount, uint256 _loss)
     {
-        // TODO: Do stuff here to free up to `_amountNeeded` from all positions back into `want`
+        // Do stuff here to free up to `_amountNeeded` from all positions back into `want`
         // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
 
@@ -405,7 +405,7 @@ contract Strategy is BaseStrategy {
     // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
 
     function prepareMigration(address _newStrategy) internal override {
-        // TODO: Transfer any non-`want` tokens to the new strategy
+        // Transfer any non-`want` tokens to the new strategy
         // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
         // This is gone if we use upgradeable
 
