@@ -12,7 +12,6 @@ def test_revoke_strategy_from_vault(
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
     # In order to pass this tests, you will need to implement prepareReturn.
-    # TODO: uncomment the following lines.
     vault.revokeStrategy(strategy.address, {"from": gov})
     chain.sleep(1)
     strategy.harvest()

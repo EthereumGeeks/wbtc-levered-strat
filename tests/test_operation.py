@@ -63,7 +63,6 @@ def test_change_debt(
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
     # In order to pass this tests, you will need to implement prepareReturn.
-    # TODO: uncomment the following lines.
     vault.updateStrategyDebtRatio(strategy.address, 5_000, {"from": gov})
     chain.sleep(1)
     strategy.harvest()

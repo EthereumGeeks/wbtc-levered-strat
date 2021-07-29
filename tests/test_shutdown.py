@@ -45,8 +45,8 @@ def test_vault_emergency(
     assert pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == amount
 
 
-# TODO: Add tests that show proper operation of this strategy through "emergencyExit"
-#       Make sure to demonstrate the "worst case losses" as well as the time it takes
+# Add tests that show proper operation of this strategy through "emergencyExit"
+# Make sure to demonstrate the "worst case losses" as well as the time it takes
 def test_emergency_exit(
     chain,
     accounts,
@@ -77,7 +77,6 @@ def test_emergency_exit(
     chain.mine(1)
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
-    # TODO: Add some code before harvest #2 to simulate earning yield
     before_pps = vault.pricePerShare()
     before_total = vault.totalAssets()
     before_debt = vault.totalDebt()
