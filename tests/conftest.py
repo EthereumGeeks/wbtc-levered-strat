@@ -114,6 +114,7 @@ def vault(pm, gov, rewards, guardian, management, token):
 def strategy(strategist, keeper, vault, Strategy, gov):
     strategy = strategist.deploy(Strategy, vault)
     strategy.setKeeper(keeper)
+    strategy.setHealthCheck("0xDDCea799fF1699e98EDF118e0629A974Df7DF012", {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy
 
@@ -130,6 +131,7 @@ def levered_strat(vault, user, token, strategy, RELATIVE_APPROX, amount):
     vault.deposit(amount, {"from": user})
     chain.sleep(1)
     strategy.harvest()
+    assert strategy.doHealthCheck() == True
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
     chain.sleep(1)
     return strategy

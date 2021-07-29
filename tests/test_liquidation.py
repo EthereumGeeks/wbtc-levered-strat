@@ -91,6 +91,9 @@ def test_liquidation(
     chain.mine(1)
 
     ## Call harvest
+    levered_strat.setDoHealthCheck(
+        False, {"from": gov}
+    )  ## We waited 11 years, this will break health check
     levered_strat.harvest()
 
     harvest_event = history[-1].events["Harvested"]

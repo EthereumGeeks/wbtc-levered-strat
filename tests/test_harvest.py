@@ -26,6 +26,7 @@ def test_profitable_harvest(
 
     # Harvest 1: Send funds through the strategy
     strategy.harvest()
+    assert strategy.doHealthCheck() == True
     chain.mine(1)  ## Recalculate rewards
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
 
@@ -43,6 +44,8 @@ def test_profitable_harvest(
 
     # Harvest 2: Realize profit
     strategy.harvest()
+    assert strategy.doHealthCheck() == True
+
     print("Reward 2")
     print(incentivesController.getRewardsBalance([lpComponent, borrowed], strategy))
     print("stratDep3 ")
@@ -80,6 +83,8 @@ def test_profitable_harvest(
 
     ## Harvest3 since we are using leveraged strat
     strategy.harvest()
+    assert strategy.doHealthCheck() == True
+
     vault.withdraw(amount, {"from": user})
     assert (
         token.balanceOf(user) > amount
