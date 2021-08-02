@@ -244,7 +244,12 @@ contract Strategy is BaseStrategy {
             // We lost some money
 
             // Repay all we can, rest is loss
-            LENDING_POOL.repay(address(want), wantEarned, VARIABLE_RATE, address(this));
+            LENDING_POOL.repay(
+                address(want),
+                wantEarned,
+                VARIABLE_RATE,
+                address(this)
+            );
 
             _loss = toRepay.sub(wantEarned);
 
@@ -256,7 +261,12 @@ contract Strategy is BaseStrategy {
             _profit = wantEarned.sub(toRepay);
 
             if (toRepay > 0) {
-                LENDING_POOL.repay(address(want), repaid, VARIABLE_RATE, address(this));
+                LENDING_POOL.repay(
+                    address(want),
+                    toRepay,
+                    VARIABLE_RATE,
+                    address(this)
+                );
             }
         }
     }
@@ -612,7 +622,12 @@ contract Strategy is BaseStrategy {
         if (repayAmount > 0) {
             //Repay this step
             LENDING_POOL.withdraw(address(want), repayAmount, address(this));
-            LENDING_POOL.repay(address(want), repayAmount, VARIABLE_RATE, address(this));
+            LENDING_POOL.repay(
+                address(want),
+                repayAmount,
+                VARIABLE_RATE,
+                address(this)
+            );
         }
     }
 
@@ -671,7 +686,12 @@ contract Strategy is BaseStrategy {
     // Useful if you ever go below 1 HF and somehow you didn't get liquidated
     function manualRepayFromManager(uint256 toRepay) public onlyVaultManagers {
         want.safeTransferFrom(msg.sender, address(this), toRepay);
-        LENDING_POOL.repay(address(want), toRepay, VARIABLE_RATE, address(this));
+        LENDING_POOL.repay(
+            address(want),
+            toRepay,
+            VARIABLE_RATE,
+            address(this)
+        );
     }
 
     /** DCA Manual Functions */
