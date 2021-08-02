@@ -111,11 +111,31 @@ contract Strategy is BaseStrategy {
         AAVE_TOKEN.safeApprove(address(ROUTER), type(uint256).max);
     }
 
+    /** SET MIN */
     function setMinHealth(uint256 newMinHealth) external onlyKeepers {
-        require(newMinHealth >= 1000000000000000000, "Need higher health");
+        require(newMinHealth >= 1000000000000000000);
         minHealth = newMinHealth;
     }
 
+        function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice)
+        external
+        onlyKeepers
+    {
+        require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS);
+        minStkAAVEPRice = newMinStkAAVEPRice;
+    }
+
+    function setMinPrice(uint256 newMinAAVEToWantPrice) external onlyKeepers {
+        require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS);
+        minAAVEToWantPrice = newMinAAVEToWantPrice;
+    }
+
+    function setMinRebalanceAmount(uint256 newMinRebalanceAmount) external onlyKeepers {
+        require(newMinRebalanceAmount > 0);
+        minRebalanceAmount = newMinRebalanceAmount;
+    }
+
+    /** Should we harvest? */
     function setHarvestBeforeMigrate(bool newHarvestBeforeMigrate)
         external
         onlyKeepers
@@ -130,18 +150,7 @@ contract Strategy is BaseStrategy {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
-    function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice)
-        external
-        onlyKeepers
-    {
-        require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS);
-        minStkAAVEPRice = newMinStkAAVEPRice;
-    }
 
-    function setMinPrice(uint256 newMinAAVEToWantPrice) external onlyKeepers {
-        require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS);
-        minAAVEToWantPrice = newMinAAVEToWantPrice;
-    }
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
