@@ -148,20 +148,18 @@ contract Strategy is BaseStrategy {
         minRebalanceAmount = newMinRebalanceAmount;
     }
 
-    function setMaxIterations(uint256 newMaxIterations)
+    // Should we harvest before migrate, should we check slippage on harvest?
+    function setShouldHarvestBeforeMigrate(bool newHarvestBeforeMigrate)
         external
         onlyVaultManagers
     {
-        require(newMaxIterations > 0 && newMaxIterations < 15);
-        maxIterations = newMaxIterations;
+        harvestBeforeMigrate = newHarvestBeforeMigrate;
     }
 
-    // Should we harvest before migrate, should we check slippage on harvest?
-    function setShould(
-        bool newHarvestBeforeMigrate,
-        bool newCheckSlippageOnHarvest
-    ) external onlyVaultManagers {
-        harvestBeforeMigrate = newHarvestBeforeMigrate;
+    function setShouldCheckSlippageOnHarvest(bool newCheckSlippageOnHarvest)
+        external
+        onlyVaultManagers
+    {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
