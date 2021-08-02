@@ -120,7 +120,7 @@ contract Strategy is BaseStrategy {
         uint256 newMinStkAAVEPRice,
         uint256 newMinAAVEToWantPrice,
         uint256 newMinRebalanceAmount
-    ) external onlyKeepers {
+    ) external onlyVaultManagers {
         require(newMinHealth >= 1000000000000000000);
         minHealth = newMinHealth;
 
@@ -138,7 +138,7 @@ contract Strategy is BaseStrategy {
     function setShould(
         bool newHarvestBeforeMigrate,
         bool newCheckSlippageOnHarvest
-    ) external onlyKeepers {
+    ) external onlyVaultManagers {
         harvestBeforeMigrate = newHarvestBeforeMigrate;
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
