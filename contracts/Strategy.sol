@@ -119,25 +119,39 @@ contract Strategy is BaseStrategy {
     }
 
     // Set min health, stkToAAVE conv, AAVE to Want Conv and minRebalanceAmount
-    function setMin(
-        uint256 newMinHealth,
-        uint256 newMinStkAAVEPRice,
-        uint256 newMinAAVEToWantPrice,
-        uint256 newMinRebalanceAmount,
-        uint256 newMaxIterations
-    ) external onlyVaultManagers {
+    function setMinHealth(uint256 newMinHealth) external onlyVaultManagers {
         require(newMinHealth >= 1000000000000000000);
         minHealth = newMinHealth;
+    }
 
+    function setMinStkAAVEPrice(uint256 newMinStkAAVEPRice)
+        external
+        onlyVaultManagers
+    {
         require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS);
         minStkAAVEPRice = newMinStkAAVEPRice;
+    }
 
+    function setMinAAVEWantToPrice(uint256 newMinAAVEToWantPrice)
+        external
+        onlyVaultManagers
+    {
         require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS);
         minAAVEToWantPrice = newMinAAVEToWantPrice;
+    }
 
+    function setMinRebalanceAmount(uint256 newMinRebalanceAmount)
+        external
+        onlyVaultManagers
+    {
         require(newMinRebalanceAmount > 0);
         minRebalanceAmount = newMinRebalanceAmount;
+    }
 
+    function setMaxIterations(uint256 newMaxIterations)
+        external
+        onlyVaultManagers
+    {
         require(newMaxIterations > 0 && newMaxIterations < 15);
         maxIterations = newMaxIterations;
     }
