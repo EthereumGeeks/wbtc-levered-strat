@@ -590,12 +590,12 @@ contract Strategy is BaseStrategy {
 
     // Divest all from AAVE, awful gas, but hey, it works
     function _divestFromAAVE() internal {
-        uint256 repayAmount = canRepay(); // The "unsafe" (below target health) you can withdraw
+        (bool shouldRepay, uint256 repayAmount) = canRepay(); // The "unsafe" (below target health) you can withdraw
 
         // Loop to withdraw until you have the amount you need
-        while (repayAmount != uint256(-1)) {
+        while (shouldRepay) {
             _withdrawStepFromAAVE(repayAmount);
-            repayAmount = canRepay();
+            (shouldRepay, repayAmount) = canRepay();
         }
         if (deposited() > 0) {
             // Withdraw the rest here
@@ -608,16 +608,17 @@ contract Strategy is BaseStrategy {
     }
 
     // Withdraw and Repay AAVE Debt
-    function _withdrawStepFromAAVE(uint256 canRepay) internal {
-        if (canRepay > 0) {
+    function _withdrawStepFromAAVE(uint256 repayAmount) internal {
+        if (repayAmount > 0) {
             //Repay this step
-            LENDING_POOL.withdraw(address(want), canRepay, address(this));
-            LENDING_POOL.repay(address(want), canRepay, 2, address(this));
+            LENDING_POOL.withdraw(address(want), repayAmount, address(this));
+            LENDING_POOL.repay(address(want), repayAmount, 2, address(this));
         }
     }
 
     // returns 95% of the collateral we can withdraw from aave, used to loop and repay debts
-    function canRepay() public view returns (uint256) {
+    // You always can repay something, if we return false, it means you have nothing to pay
+    function canRepay() public view returns (bool, uint256) {
         (
             uint256 totalCollateralETH,
             uint256 totalDebtETH,
@@ -631,14 +632,14 @@ contract Strategy is BaseStrategy {
         uint256 vBalance = borrowed();
 
         if (vBalance == 0) {
-            return type(uint256).max; //You have repaid all
+            return (false, 0); //You have repaid all
         }
 
         uint256 diff =
-            aBalance.sub(vBalance.mul(10000).div(currentLiquidationThreshold));
+            aBalance.sub(vBalance.mul(MAX_BPS).div(currentLiquidationThreshold));
         uint256 inWant = diff.mul(95).div(100); // Take 95% just to be safe
 
-        return inWant;
+        return (true, inWant);
     }
 
     /** Manual Functions */
