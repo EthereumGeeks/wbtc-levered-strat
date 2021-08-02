@@ -113,45 +113,32 @@ contract Strategy is BaseStrategy {
         AAVE_TOKEN.safeApprove(address(ROUTER), type(uint256).max);
     }
 
-    /** SET MIN */
-    function setMinHealth(uint256 newMinHealth) external onlyKeepers {
+    // Set min health, stkToAAVE conv, AAVE to Want Conv and minRebalanceAmount
+    function setMin(
+        uint256 newMinHealth,
+        uint256 newMinStkAAVEPRice,
+        uint256 newMinAAVEToWantPrice,
+        uint256 newMinRebalanceAmount
+    ) external onlyKeepers {
         require(newMinHealth >= 1000000000000000000);
         minHealth = newMinHealth;
-    }
 
-    function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice)
-        external
-        onlyKeepers
-    {
         require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS);
         minStkAAVEPRice = newMinStkAAVEPRice;
-    }
 
-    function setMinPrice(uint256 newMinAAVEToWantPrice) external onlyKeepers {
         require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS);
         minAAVEToWantPrice = newMinAAVEToWantPrice;
-    }
 
-    function setMinRebalanceAmount(uint256 newMinRebalanceAmount)
-        external
-        onlyKeepers
-    {
         require(newMinRebalanceAmount > 0);
         minRebalanceAmount = newMinRebalanceAmount;
     }
 
-    /** Should we harvest? */
-    function setHarvestBeforeMigrate(bool newHarvestBeforeMigrate)
-        external
-        onlyKeepers
-    {
+    // Should we harvest before migrate, should we check slippage on harvest?
+    function setShould(
+        bool newHarvestBeforeMigrate,
+        bool newCheckSlippageOnHarvest
+    ) external onlyKeepers {
         harvestBeforeMigrate = newHarvestBeforeMigrate;
-    }
-
-    function setCheckSlippageOnHarvest(bool newCheckSlippageOnHarvest)
-        external
-        onlyKeepers
-    {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
 
@@ -446,7 +433,10 @@ contract Strategy is BaseStrategy {
         }
 
         if (AAVE_TOKEN.balanceOf(address(this)) > 0) {
-            AAVE_TOKEN.safeTransfer(_newStrategy, AAVE_TOKEN.balanceOf(address(this)));
+            AAVE_TOKEN.safeTransfer(
+                _newStrategy,
+                AAVE_TOKEN.balanceOf(address(this))
+            );
         }
     }
 
@@ -531,14 +521,8 @@ contract Strategy is BaseStrategy {
 
     // What should we repay?
     function debtBelowHealth() public view returns (uint256) {
-        (
-            uint256 totalCollateralETH,
-            uint256 totalDebtETH,
-            uint256 availableBorrowsETH,
-            uint256 currentLiquidationThreshold,
-            uint256 ltv,
-            uint256 healthFactor
-        ) = LENDING_POOL.getUserAccountData(address(this));
+        (, , , , uint256 ltv, uint256 healthFactor) =
+            LENDING_POOL.getUserAccountData(address(this));
 
         // How much did we go off of minHealth? //NOTE: We always borrow as much as we can
         uint256 maxBorrow = deposited().mul(ltv).div(MAX_BPS);
@@ -556,14 +540,8 @@ contract Strategy is BaseStrategy {
 
     // NOTE: We always borrow max, no fucks given
     function canBorrow() public view returns (uint256) {
-        (
-            uint256 totalCollateralETH,
-            uint256 totalDebtETH,
-            uint256 availableBorrowsETH,
-            uint256 currentLiquidationThreshold,
-            uint256 ltv,
-            uint256 healthFactor
-        ) = LENDING_POOL.getUserAccountData(address(this));
+        (, , , , uint256 ltv, uint256 healthFactor) =
+            LENDING_POOL.getUserAccountData(address(this));
 
         if (healthFactor > minHealth) {
             // Amount = deposited * ltv - borrowed
