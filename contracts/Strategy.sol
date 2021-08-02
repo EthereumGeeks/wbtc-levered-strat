@@ -527,7 +527,7 @@ contract Strategy is BaseStrategy {
 
         // How much did we go off of minHealth? //NOTE: We always borrow as much as we can
         uint256 maxBorrow = deposited().mul(ltv).div(MAX_BPS);
-        
+
         uint256 allDebt = borrowed();
 
         if (healthFactor < minHealth && allDebt > maxBorrow) {
@@ -631,7 +631,7 @@ contract Strategy is BaseStrategy {
         uint256 vBalance = borrowed();
 
         if (vBalance == 0) {
-            return uint256(-1); //You have repaid all
+            return type(uint256).max; //You have repaid all
         }
 
         uint256 diff =
