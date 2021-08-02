@@ -117,7 +117,7 @@ contract Strategy is BaseStrategy {
         minHealth = newMinHealth;
     }
 
-        function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice)
+    function setMinStkAAVEPRice(uint256 newMinStkAAVEPRice)
         external
         onlyKeepers
     {
@@ -130,7 +130,10 @@ contract Strategy is BaseStrategy {
         minAAVEToWantPrice = newMinAAVEToWantPrice;
     }
 
-    function setMinRebalanceAmount(uint256 newMinRebalanceAmount) external onlyKeepers {
+    function setMinRebalanceAmount(uint256 newMinRebalanceAmount)
+        external
+        onlyKeepers
+    {
         require(newMinRebalanceAmount > 0);
         minRebalanceAmount = newMinRebalanceAmount;
     }
@@ -149,8 +152,6 @@ contract Strategy is BaseStrategy {
     {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
     }
-
-
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
 
@@ -180,9 +181,6 @@ contract Strategy is BaseStrategy {
         // NOTE: This means that if we are paying back we just deleverage
         // While if we are not paying back, we are harvesting rewards
         if (_debtOutstanding > 0) {
-            // Withdraw and Repay
-            uint256 toWithdraw = _debtOutstanding;
-
             // Get it all out
             _divestFromAAVE();
 
@@ -197,7 +195,9 @@ contract Strategy is BaseStrategy {
                 _debtPayment = maxRepay;
             } else {
                 // We can pay all, let's do it
-                _debtPayment = toWithdraw;
+                _debtPayment = _debtOutstanding;
+                // What's left is our profit
+                _profit = maxRepay.sub(_debtOutstanding);
             }
         } else {
             // Do normal Harvest
