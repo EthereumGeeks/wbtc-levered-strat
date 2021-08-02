@@ -86,13 +86,8 @@ def test_liquidation(
     chain.mine(1)
 
     ## Avoid random reverts - Empty rewards and swap manually
-    levered_strat.setMin(
-        levered_strat.minHealth(),
-        0,
-        0,
-        levered_strat.minRebalanceAmount(),
-        {"from": gov},
-    )
+    levered_strat.setMinStkAAVEPRice(0, {"from": gov})
+    levered_strat.setMinAAVEWantToPrice(0, {"from": gov})
     chain.mine(1)
 
     ## Call harvest
