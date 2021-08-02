@@ -251,11 +251,9 @@ contract Strategy is BaseStrategy {
             // We made money or are even
 
             // Let's repay the debtBelowHealth
-            uint256 repaid = toRepay;
+            _profit = wantEarned.sub(toRepay);
 
-            _profit = wantEarned.sub(repaid);
-
-            if (repaid > 0) {
+            if (toRepay > 0) {
                 LENDING_POOL.repay(address(want), repaid, 2, address(this));
             }
         }
@@ -636,7 +634,9 @@ contract Strategy is BaseStrategy {
         }
 
         uint256 diff =
-            aBalance.sub(vBalance.mul(MAX_BPS).div(currentLiquidationThreshold));
+            aBalance.sub(
+                vBalance.mul(MAX_BPS).div(currentLiquidationThreshold)
+            );
         uint256 inWant = diff.mul(95).div(100); // Take 95% just to be safe
 
         return (true, inWant);
