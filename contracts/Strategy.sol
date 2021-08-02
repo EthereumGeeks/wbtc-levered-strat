@@ -8,7 +8,8 @@ pragma experimental ABIEncoderV2;
 // These are the core Yearn libraries
 import {
     BaseStrategy,
-    StrategyParams
+    StrategyParams,
+    VaultAPI
 } from "@yearnvaults/contracts/BaseStrategy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
@@ -185,8 +186,15 @@ contract Strategy is BaseStrategy {
             } else {
                 // We can pay all, let's do it
                 _debtPayment = _debtOutstanding;
+                // Profit has to be the amount above Vault.debt
                 // What's left is our profit
-                _profit = maxRepay.sub(_debtOutstanding);
+                uint256 initialDebt =
+                    VaultAPI(vault).strategies(address(this)).totalDebt;
+                // In repaying we may report a profit or a loss
+                if (maxRepay.sub(_debtOutstanding) > initialDebt) {
+                    // We have some profit
+                    _profit = maxRepay.sub(initialDebt).sub(_debtOutstanding);
+                }
             }
         } else {
             // Do normal Harvest

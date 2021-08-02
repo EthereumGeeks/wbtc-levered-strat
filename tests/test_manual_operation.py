@@ -105,7 +105,7 @@ def test_manual_manualWithdrawStepFromAAVE(
     prev_assets = levered_strat.estimatedTotalAssets()
     assert prev_debt > 0
 
-    max_repay = levered_strat.canRepay()
+    (x, max_repay) = levered_strat.canRepay()
 
     ## Delever by max_repay (just like the strat would)
     levered_strat.manualWithdrawStepFromAAVE(max_repay, {"from": gov})
