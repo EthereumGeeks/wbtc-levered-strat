@@ -170,12 +170,18 @@ contract Strategy is BaseStrategy {
     {
         // NOTE: This means that if we are paying back we just deleverage
         // While if we are not paying back, we are harvesting rewards
+
+        // Get current amount of want // used to estimate profit
+        uint256 beforeBalance = want.balanceOf(address(this));
+
+        // Claim stkAAVE -> swap into want
+        _claimRewardsAndGetMoreWant();
+
+        (uint256 earned, uint256 lost) = _repayAAVEBorrow(beforeBalance);
+
         if (_debtOutstanding > 0) {
             // Get it all out
             _divestFromAAVE();
-
-            // Get rewards
-            _claimRewardsAndGetMoreWant();
 
             // Repay debt
             uint256 maxRepay = want.balanceOf(address(this));
@@ -190,24 +196,22 @@ contract Strategy is BaseStrategy {
                 // What's left is our profit
                 uint256 initialDebt =
                     VaultAPI(vault).strategies(address(this)).totalDebt;
+
                 // In repaying we may report a profit or a loss
+                // In this case we have profit
                 if (maxRepay.sub(_debtOutstanding) > initialDebt) {
                     // We have some profit
                     _profit = maxRepay.sub(initialDebt).sub(_debtOutstanding);
                 }
+                // In this case we have Loss
+                if (maxRepay < initialDebt) {
+                    // We have some loss
+                    _loss = initialDebt.sub(maxRepay);
+                }
             }
         } else {
-            // Do normal Harvest
+            // In case of normal harvest, just return the value from `_repayAAVEBorrow`
             _debtPayment = 0;
-
-            // Get current amount of want // used to estimate profit
-            uint256 beforeBalance = want.balanceOf(address(this));
-
-            // Claim stkAAVE -> swap into want
-            _claimRewardsAndGetMoreWant();
-
-            (uint256 earned, uint256 lost) = _repayAAVEBorrow(beforeBalance);
-
             _profit = earned;
             _loss = lost;
         }
