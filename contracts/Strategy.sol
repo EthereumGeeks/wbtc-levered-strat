@@ -444,6 +444,10 @@ contract Strategy is BaseStrategy {
         if (reward.balanceOf(address(this)) > 0) {
             reward.safeTransfer(_newStrategy, reward.balanceOf(address(this)));
         }
+
+        if (AAVE_TOKEN.balanceOf(address(this)) > 0) {
+            AAVE_TOKEN.safeTransfer(_newStrategy, AAVE_TOKEN.balanceOf(address(this)));
+        }
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -465,9 +469,10 @@ contract Strategy is BaseStrategy {
         override
         returns (address[] memory)
     {
-        address[] memory protected = new address[](2);
+        address[] memory protected = new address[](3);
         protected[0] = address(aToken);
         protected[1] = address(reward);
+        protected[2] = address(AAVE_TOKEN);
         return protected;
     }
 
