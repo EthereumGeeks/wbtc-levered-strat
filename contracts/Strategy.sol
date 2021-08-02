@@ -66,6 +66,7 @@ contract Strategy is BaseStrategy {
         IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     uint256 public constant VARIABLE_RATE = 2;
+    uint16 public constant REFERRAL_CODE = 0;
 
     // Min Price we tollerate when swapping from stkAAVE to AAVE
     uint256 public minStkAAVEPRice = 9500; // 95%
@@ -82,6 +83,9 @@ contract Strategy is BaseStrategy {
     uint256 public constant MAX_BPS = 10000;
     uint256 public minHealth = 1080000000000000000; // 1.08 with 18 decimals this is slighly above 70% tvl
     uint256 public minRebalanceAmount = 50000000; // 0.5 should be changed based on decimals (btc has 8)
+
+    // How many times should we loop around?
+    uint256 public maxIterations = 5;
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
@@ -119,7 +123,8 @@ contract Strategy is BaseStrategy {
         uint256 newMinHealth,
         uint256 newMinStkAAVEPRice,
         uint256 newMinAAVEToWantPrice,
-        uint256 newMinRebalanceAmount
+        uint256 newMinRebalanceAmount,
+        uint256 newMaxIterations
     ) external onlyVaultManagers {
         require(newMinHealth >= 1000000000000000000);
         minHealth = newMinHealth;
@@ -132,6 +137,9 @@ contract Strategy is BaseStrategy {
 
         require(newMinRebalanceAmount > 0);
         minRebalanceAmount = newMinRebalanceAmount;
+
+        require(newMaxIterations > 0 && newMaxIterations < 15);
+        maxIterations = newMaxIterations;
     }
 
     // Should we harvest before migrate, should we check slippage on harvest?
@@ -276,7 +284,12 @@ contract Strategy is BaseStrategy {
         uint256 wantAvailable = want.balanceOf(address(this));
         if (wantAvailable > _debtOutstanding) {
             uint256 toDeposit = wantAvailable.sub(_debtOutstanding);
-            LENDING_POOL.deposit(address(want), toDeposit, address(this), 0);
+            LENDING_POOL.deposit(
+                address(want),
+                toDeposit,
+                address(this),
+                REFERRAL_CODE
+            );
 
             // Lever up
             _invest();
@@ -574,19 +587,23 @@ contract Strategy is BaseStrategy {
 
     function _invest() internal {
         // Loop on it until it's properly done
-        uint256 max_iterations = 5;
-        for (uint256 i = 0; i < max_iterations; i++) {
+        for (uint256 i = 0; i < maxIterations; i++) {
             uint256 toBorrow = canBorrow();
             if (toBorrow > 0) {
                 LENDING_POOL.borrow(
                     address(want),
                     toBorrow,
-                    2,
-                    0,
+                    VARIABLE_RATE,
+                    REFERRAL_CODE,
                     address(this)
                 );
 
-                LENDING_POOL.deposit(address(want), toBorrow, address(this), 0);
+                LENDING_POOL.deposit(
+                    address(want),
+                    toBorrow,
+                    address(this),
+                    REFERRAL_CODE
+                );
             } else {
                 break;
             }
