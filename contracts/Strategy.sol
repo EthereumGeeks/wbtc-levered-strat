@@ -19,9 +19,7 @@ import {
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import {
-    Math
-} from "@openzeppelin/contracts/math/Math.sol";
+import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
 import {IStakedAave} from "../interfaces/aave/IStakedAave.sol";
 import {ILendingPool} from "../interfaces/aave/ILendingPool.sol";
@@ -235,7 +233,10 @@ contract Strategy is BaseStrategy {
                 // In this case we have profit
                 if (maxRepay > initialDebt) {
                     // We have some profit
-                    _profit = Math.min(maxRepay.sub(initialDebt), maxRepay.sub(_debtOutstanding));
+                    _profit = Math.min(
+                        maxRepay.sub(initialDebt),
+                        maxRepay.sub(_debtOutstanding)
+                    );
                 } else {
                     // We have some loss
                     _loss = initialDebt.sub(maxRepay);
