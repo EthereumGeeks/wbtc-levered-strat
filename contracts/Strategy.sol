@@ -78,7 +78,7 @@ contract Strategy is BaseStrategy {
 
     // Should we ensure the swap will be within slippage params before performing it during normal harvest?
     bool public checkSlippageOnHarvest = true;
-    
+
     // Turn migration into noOP, prepareMigration does nothing when this is true
     bool public skipMigration = false;
 
