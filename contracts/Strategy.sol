@@ -78,6 +78,9 @@ contract Strategy is BaseStrategy {
 
     // Should we ensure the swap will be within slippage params before performing it during normal harvest?
     bool public checkSlippageOnHarvest = true;
+    
+    // Turn migration into noOP, prepareMigration does nothing when this is true
+    bool public skipMigration = false;
 
     // Leverage
     uint256 public constant MAX_BPS = 10000;
@@ -161,6 +164,13 @@ contract Strategy is BaseStrategy {
         onlyVaultManagers
     {
         checkSlippageOnHarvest = newCheckSlippageOnHarvest;
+    }
+
+    function setSkipMigration(bool newSkipMigration)
+        external
+        onlyVaultManagers
+    {
+        skipMigration = newSkipMigration;
     }
 
     // ******** OVERRIDE THESE METHODS FROM BASE CONTRACT ************
@@ -441,6 +451,11 @@ contract Strategy is BaseStrategy {
         // Transfer any non-`want` tokens to the new strategy
         // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
         // This is gone if we use upgradeable
+
+        if (skipMigration) {
+            // No-op
+            return;
+        }
 
         //Divest all
         _divestFromAAVE();
