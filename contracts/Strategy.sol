@@ -120,7 +120,7 @@ contract Strategy is BaseStrategy {
 
     // Set min health, stkToAAVE conv, AAVE to Want Conv and minRebalanceAmount
     function setMinHealth(uint256 newMinHealth) external onlyVaultManagers {
-        require(newMinHealth >= 1000000000000000000);
+        require(newMinHealth >= 1000000000000000000); // dev: minHealth
         minHealth = newMinHealth;
     }
 
@@ -128,7 +128,7 @@ contract Strategy is BaseStrategy {
         external
         onlyVaultManagers
     {
-        require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS);
+        require(newMinStkAAVEPRice >= 0 && newMinStkAAVEPRice <= MAX_BPS); // dev: minStkAAVEPRice
         minStkAAVEPRice = newMinStkAAVEPRice;
     }
 
@@ -136,7 +136,7 @@ contract Strategy is BaseStrategy {
         external
         onlyVaultManagers
     {
-        require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS);
+        require(newMinAAVEToWantPrice >= 0 && newMinAAVEToWantPrice <= MAX_BPS); // dev: minAAVEToWantPrice
         minAAVEToWantPrice = newMinAAVEToWantPrice;
     }
 
@@ -144,7 +144,7 @@ contract Strategy is BaseStrategy {
         external
         onlyVaultManagers
     {
-        require(newMinRebalanceAmount > 0);
+        require(newMinRebalanceAmount > 0); // dev: minRebalanceAmount
         minRebalanceAmount = newMinRebalanceAmount;
     }
 
