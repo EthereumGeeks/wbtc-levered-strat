@@ -241,9 +241,6 @@ contract Strategy is BaseStrategy {
         internal
         returns (uint256 _profit, uint256 _loss)
     {
-        uint256 afterSwapBalance = want.balanceOf(address(this));
-        uint256 wantFromSwap = afterSwapBalance.sub(beforeBalance);
-
         // Calculate Gain from AAVE interest // NOTE: This should never happen as we take more debt than we earn
         uint256 currentWantInAave = deposited().sub(borrowed());
         uint256 initialDeposit = vault.strategies(address(this)).totalDebt;
@@ -259,34 +256,27 @@ contract Strategy is BaseStrategy {
         // Pay off any debt
         // Debt is equal to negative of canBorrow
         uint256 toRepay = debtBelowHealth();
+        uint256 repayAmount = toRepay;
+
         if (toRepay > wantEarned) {
-            // We lost some money
-
+            // We lost some money, and can only repay up to wantEarned
+            repayAmount = wantEarned;
             // Repay all we can, rest is loss
-            LENDING_POOL.repay(
-                address(want),
-                wantEarned,
-                VARIABLE_RATE,
-                address(this)
-            );
-
-            _loss = toRepay.sub(wantEarned);
-
+            _loss = toRepay.sub(repayAmount);
             // Notice that once the strats starts loosing funds here, you should probably retire it as it's not profitable
         } else {
             // We made money or are even
+            // Let's repay the debtBelowHealth, rest is profit
+            _profit = wantEarned.sub(repayAmount);
+        }
 
-            // Let's repay the debtBelowHealth
-            _profit = wantEarned.sub(toRepay);
-
-            if (toRepay > 0) {
-                LENDING_POOL.repay(
-                    address(want),
-                    toRepay,
-                    VARIABLE_RATE,
-                    address(this)
-                );
-            }
+        if (repayAmount > 0) {
+            LENDING_POOL.repay(
+                address(want),
+                repayAmount,
+                VARIABLE_RATE,
+                address(this)
+            );
         }
     }
 
